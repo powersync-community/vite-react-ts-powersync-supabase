@@ -5,7 +5,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 1
     reviewers:
       - "dean-journeyapps"
       - "joshua-journey-apps"
@@ -20,22 +20,7 @@ updates:
     allow:
       - dependency-type: "all"
     groups:
-      react-ecosystem:
+      # Single group for all dependencies
+      all-dependencies:
         patterns:
-          - "react*"
-          - "@types/react*"
-      build-tools:
-        patterns:
-          - "webpack*"
-          - "babel*"
-          - "eslint*"
-          - "vite*"
-      powersync:
-        patterns:
-          - "@powersync/*"
-          - "powersync*"
-      testing:
-        patterns:
-          - "jest*"
-          - "@testing-library/*"
-          - "vitest*"
+          - "*"
