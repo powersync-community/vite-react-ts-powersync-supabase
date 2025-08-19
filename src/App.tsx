@@ -13,8 +13,16 @@ function App() {
 
   // Example of a watch query using useQuery hook
   // This demonstrates how to fetch and automatically update data when the underlying table changes
+  // using an incremental watch query - see here https://docs.powersync.com/usage/use-case-examples/watch-queries#incremental-watch-queries
   const { data: counters, isLoading } = useQuery<CounterRecord>(
-    `SELECT * FROM ${COUNTER_TABLE} ORDER BY created_at ASC`
+    `SELECT * FROM ${COUNTER_TABLE} ORDER BY created_at ASC`,
+    [],
+    {
+      rowComparator: {
+        keyBy: (item) => item.id,
+        compareBy: (item) => JSON.stringify(item)
+      }
+    }
   );
 
   // Get the current authenticated user's ID from Supabase on component mount
