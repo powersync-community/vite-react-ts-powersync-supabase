@@ -1,0 +1,16 @@
+services:
+  powersync:
+    container_name: powersync_demo   
+    restart: unless-stopped
+    image: journeyapps/powersync-service:latest
+    volumes:
+      - ./powersync.yaml:/app/powersync.yaml
+    networks:
+      - supabase_network_powersync
+    env_file: ../.env.local
+    ports:
+      - 8080:8080
+
+networks:
+  supabase_network_powersync:
+    external: true
