@@ -42,10 +42,7 @@ export class SupabaseConnector
   readonly client: SupabaseClient;
   readonly config: SupabaseConfig;
 
-  ready: boolean;
   currentSession: Session | null;
-  private initializationPromise: Promise<void>;
-  private signingIn: boolean = false;
 
   constructor() {
     super();
@@ -67,24 +64,6 @@ export class SupabaseConnector
       }
     );
     this.currentSession = null;
-    this.ready = false;
-
-    // Restore session from localStorage
-    this.initializationPromise = this.initializeSession();
-  }
-
-  private async initializeSession(): Promise<void> {
-    try {
-      const { data, error } = await this.client.auth.getSession();
-      if (error) {
-        console.error("Failed to restore session:", error);
-      } else if (data?.session) {
-        console.log("Restored session:", data.session);
-        this.updateSession(data.session);
-      }
-    } catch (error) {
-      console.error("Error during session initialization:", error);
-    }
   }
 
   /**
@@ -108,49 +87,19 @@ export class SupabaseConnector
   // }
 
   async signInAnonymously() {
-    // Wait for initialization to complete first
-    await this.initializationPromise;
-    
-    // Check if we already have a valid session
-    if (this.currentSession) {
-      return this.currentSession;
+    const { data: { user } } = await this.client.auth.getUser();
+    if (user?.id) return;
+
+    const {
+      data: { session },
+      error
+    } = await this.client.auth.signInAnonymously();
+
+    if (error) {
+      throw error;
     }
 
-    // Prevent concurrent sign-in attempts
-    if (this.signingIn) {
-      console.log("Already signing in, waiting...");
-      // Wait for the current sign-in to complete
-      while (this.signingIn) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      return this.currentSession;
-    }
-
-    try {
-      this.signingIn = true;
-      
-      // Double-check session after acquiring lock
-      if (this.currentSession) {
-        console.log("Session acquired while waiting");
-        return this.currentSession;
-      }
-
-      const {
-        data: { session },
-        error
-      } = await this.client.auth.signInAnonymously();
-
-      if (error) {
-        throw error;
-      }
-
-      console.log("Signed in anonymously:", session);
-      this.updateSession(session);
-
-      return session;
-    } finally {
-      this.signingIn = false;
-    }
+    this.updateSession(session);
   }
 
   async logout() {

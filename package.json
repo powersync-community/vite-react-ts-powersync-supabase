@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "@journeyapps/wa-sqlite": "^1.2.5",
-    "@powersync/react": "^1.5.3",
-    "@powersync/web": "^1.23.0",
+    "@powersync/react": "^1.7.0",
+    "@powersync/web": "^1.25.1",
     "@supabase/supabase-js": "^2.50.2",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",

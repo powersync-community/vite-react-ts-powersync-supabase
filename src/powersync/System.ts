@@ -65,4 +65,8 @@ export const powerSync = new PowerSyncDatabase({
  * 🔧 Quick prototype → Keep default (IndexedDB)
  */
 
+// Sign in the user anonymously to Supabase (creates a temporary user session)
+await connector.signInAnonymously();
+
+// Establish connection between PowerSync and the Supabase connector
 powerSync.connect(connector);
