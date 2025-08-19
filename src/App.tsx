@@ -7,8 +7,6 @@ import { connector } from "./powersync/SupabaseConnector";
 
 function App() {
   const [userID, setUserID] = useState<string | null>(null);
-  // const [isAuthenticating, setIsAuthenticating] = useState(false);
-  // const [authError, setAuthError] = useState<string | null>(null);
   const status = useStatus();
 
   // Example of a watch query using useQuery hook
