@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev:ui": "vite",
-    "dev:powersync": "docker compose -f docker/compose.yaml up --build",
+    "dev:powersync": "docker compose -f docker/compose.yaml up -d",
     "dev:supabase": "supabase start",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
