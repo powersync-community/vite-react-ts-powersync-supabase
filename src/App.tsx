@@ -51,9 +51,6 @@ function App() {
   const createCounter = async () => {
     // Ensure user is authenticated before creating counter
     if (!userID) {
-      console.log("No user ID, attempting to authenticate...");
-      // await fetchUserID();
-
       // If still no userID after fetch, don't proceed
       if (!userID) {
         console.error("Cannot create counter: No authenticated user");
