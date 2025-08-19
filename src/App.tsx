@@ -1,14 +1,14 @@
 import "./App.css";
 import { useQuery, useStatus } from "@powersync/react";
 import { COUNTER_TABLE, type CounterRecord } from "./powersync/AppSchema";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { powerSync } from "./powersync/System";
 import { connector } from "./powersync/SupabaseConnector";
 
 function App() {
   const [userID, setUserID] = useState<string | null>(null);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
+  // const [isAuthenticating, setIsAuthenticating] = useState(false);
+  // const [authError, setAuthError] = useState<string | null>(null);
   const status = useStatus();
 
   // Example of a watch query using useQuery hook
@@ -17,45 +17,15 @@ function App() {
     `SELECT * FROM ${COUNTER_TABLE} ORDER BY created_at ASC`
   );
 
-  // Function to fetch and set the current user's ID from Supabase auth session
-  // Handles both existing sessions and new anonymous authentication
-  const fetchUserID = async () => {
-    if (isAuthenticating) {
-      console.log("Already authenticating, skipping...");
-      return;
-    }
+  // Get the current authenticated user's ID from Supabase on component mount
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await connector.client.auth.getUser();
+      setUserID(user?.id || null);
+    };
 
-    setIsAuthenticating(true);
-    setAuthError(null);
-
-    try {
-      console.log("Fetching user ID from Supabase...");
-
-      // First check if we already have a session
-      let session = connector.currentSession;
-
-      if (!session) {
-        // Only sign in anonymously if we don't have a session
-        session = await connector.signInAnonymously();
-      }
-
-      const userId = session?.user?.id;
-
-      if (userId) {
-        setUserID(userId);
-      } else {
-        const errorMsg = "No user ID found in session";
-        console.error(errorMsg);
-        setAuthError(errorMsg);
-      }
-    } catch (error) {
-      const errorMsg = `Authentication failed: ${error}`;
-      console.error(errorMsg);
-      setAuthError(errorMsg);
-    } finally {
-      setIsAuthenticating(false);
-    }
-  };
+    getCurrentUser();
+  }, []);
 
   // Example of executing a native SQLite query using PowerSync
   // This demonstrates how to directly execute SQL commands for data mutations
@@ -75,12 +45,8 @@ function App() {
   const createCounter = async () => {
     // Ensure user is authenticated before creating counter
     if (!userID) {
-      if (isAuthenticating) {
-        console.log("Authentication in progress, please wait...");
-        return;
-      }
       console.log("No user ID, attempting to authenticate...");
-      await fetchUserID();
+      // await fetchUserID();
 
       // If still no userID after fetch, don't proceed
       if (!userID) {
@@ -99,12 +65,6 @@ function App() {
       console.error("Error creating counter:", err);
     }
   };
-
-  // Check for existing session when component mounts
-  // This runs only once when the app first loads
-  if (!userID && !isAuthenticating && !authError) {
-    fetchUserID();
-  }
 
   return (
     <div className="app-container">
@@ -131,8 +91,6 @@ function App() {
                 <div><strong>lastSyncedAt:</strong> {status.lastSyncedAt?.toLocaleString() ?? "N/A"}</div>
 
                 <div><strong>User ID:</strong> {userID || "Not authenticated"}</div>
-                {isAuthenticating && <div><strong>Status:</strong> Authenticating...</div>}
-                {authError && <div style={{ color: 'red' }}><strong>Auth Error:</strong> {authError}</div>}
               </>
             )}
           </div>
