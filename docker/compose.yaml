@@ -1,6 +1,6 @@
 services:
   powersync:
-    container_name: powersync_demo   
+    container_name: powersync_demo
     restart: unless-stopped
     image: journeyapps/powersync-service:latest
     volumes:
@@ -10,6 +10,7 @@ services:
     env_file: ../.env.local
     ports:
       - 8080:8080
+      - 9090:9090
 
 networks:
   supabase_network_powersync:
