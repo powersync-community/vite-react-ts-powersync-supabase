@@ -198,14 +198,11 @@ VITE_POWERSYNC_URL=
 3. Navigate to your PowerSync instance
 4. Copy the "Instance URL" for `VITE_POWERSYNC_URL`
 
-<details>
-<summary><strong>4. Start with bolt.new</strong></summary>
+## Use this project with bolt.new
 
-Start the project using [bolt.new](https://bolt.new):
+**To run this repo using Bolt.new will only work with the [Cloud Development](#cloud-development) option.**
 
 - Open this [link](https://bolt.new/github.com/powersync-community/vite-react-ts-powersync-supabase/tree/main) to load the project.
    - You will see a configuration error in the preview window because the `.env.local` file has not yet been defined.
 - Create a new `.env.local` file and populate it with the appropriate Supabase and PowerSync credentials, as specified in the `.env.local.template` file included in this repository (refer to step 4 "Set up environment").
 - Save the file — the app should launch automatically.
-
-</details>
