@@ -4,18 +4,9 @@
 
 A templated Vite, TS, React, PowerSync and Supabase project to get you started quickly with building offline-first applications with PowerSync and Supabase.
 
-## Requirements
-
-| Tool/Service     | Version / Info             | Notes                                                  |
-|------------------|----------------------------|--------------------------------------------------------|
-| Node.js (via nvm)| `v20.19.0`                 | Ensure you run `nvm use` to match the project version |
-| PowerSync        | Active account required    | [Sign up here](https://accounts.journeyapps.com/portal/powersync-signup)             |
-| Supabase         | Active project/account     | [Sign up here](https://supabase.com/dashboard/sign-up)                   |
-
-
 # Getting Started
 
-You have 4 options to get started with this template. We recommend using the first option for a quick start.
+There are a few ways you can use this template. We recommend using the first option for a quick start.
 
 <details>
 <summary><strong>1. Generate from template (Recommended)</strong></summary>
@@ -60,22 +51,47 @@ Start the project using [bolt.new](https://bolt.new):
 
 </details>
 
-## Usage
+# Usage
+
+There are two ways to run the project:
+1. Run the full stack locally. No signups required.
+2. Connect your local client to PowerSync Cloud and Supabase.
 
 After cloning the repository, navigate to the project directory and install the dependencies:
 
 ```bash
 cd vite-react-ts-powersync-supabase
 npm install
-npm run dev
 ```
 
----
+## Local Setup
 
-# Backend Setup
+First, copy the environment template file:
+```bash
+cp .env.local.template .env.local
+```
+Then run the start-up commands for the various services:
+```bash
+npm run dev:supabase
+npm run dev:powersync
+npm run dev:ui
+```
+
+Navigate to the local Vite URL e.g. http://localhost:5173/
+
+## Cloud Setup
+
+###  Requirements
+
+| Tool/Service     | Version / Info             | Notes                                                  |
+|------------------|----------------------------|--------------------------------------------------------|
+| PowerSync        | Active account required    | [Sign up here](https://accounts.journeyapps.com/portal/powersync-signup)             |
+| Supabase         | Active project/account     | [Sign up here](https://supabase.com/dashboard/sign-up)                   |
+
+### Backend Setup
 This section guides you through setting up the backend using Supabase and PowerSync. Follow the steps below to configure your backend environment.
 
-## 1. Setup Supabase
+#### 1. Setup Supabase
 Follow these steps to set up your backend with Supabase and PowerSync (Or you can follow the [guide](https://docs.powersync.com/integration-guides/supabase-+-powersync)).
 
 <details>
@@ -104,7 +120,7 @@ If you prefer using the Supabase CLI, you can set up your project as follows:
 
 </details>
 
-## 2. Setup PowerSync Instance and Connect to Supabase
+#### 2. Setup PowerSync Instance and Connect to Supabase
 
 You can set up your PowerSync instance using either the Dashboard or CLI approach:
 
@@ -172,7 +188,7 @@ Follow the prompts to configure:
 
 </details>
 
-## 3. Deploy Sync Rules
+#### 3. Deploy Sync Rules
 
 <details>
 <summary><strong>Option 1: Using CLI (if you used CLI setup above)</strong></summary>
@@ -190,7 +206,7 @@ The sync rules are already deployed if you followed the CLI setup steps above.
 
 </details>
 
-## 4. Set up environment
+#### 4. Set up environment
 
 First, copy the environment template file:
 ```bash
