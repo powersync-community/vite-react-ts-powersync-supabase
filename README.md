@@ -4,77 +4,28 @@
 
 A templated Vite, TS, React, PowerSync and Supabase project to get you started quickly with building offline-first applications with PowerSync and Supabase.
 
-# How to use this template
-
-There are a few ways you can use this template. We recommend using the first option for a quick start.
-
-<details>
-<summary><strong>1. Generate from template (Recommended)</strong></summary>
-
-Generate a repository from this [template](https://github.com/powersync-community/vite-react-ts-powersync-supabase/generate).
-
-</details>
-
-<details>
-<summary><strong>2. Use degit</strong></summary>
-
-Use [degit](https://github.com/Rich-Harris/degit) to scaffold the project:
-
-```bash
-npx degit powersync-community/vite-react-ts-powersync-supabase
-```
-
-> **Note**: `degit` is a tool that downloads the latest version of a repository without the git history, giving you a clean starting point. Add a second argument to specify your project name (e.g., my-app).
-
-</details>
-
-<details>
-<summary><strong>3. Clone the repository</strong></summary>
-
-Clone the repository directly and install dependencies:
-
-```bash
-git clone https://github.com/powersync-community/vite-react-ts-powersync-supabase.git
-```
-
-</details>
-
-<details>
-<summary><strong>4. Start with bolt.new</strong></summary>
-
-Start the project using [bolt.new](https://bolt.new):
-
-- Open this [link](https://bolt.new/github.com/powersync-community/vite-react-ts-powersync-supabase/tree/main) to load the project.
-  - You will see a configuration error in the preview window because the `.env.local` file has not yet been defined.
-- Create a new `.env.local` file and populate it with the appropriate Supabase and PowerSync credentials, as specified in the `.env.local.template` file included in this repository (refer to step 4 "Set up environment").
-- Save the file — the app should launch automatically.
-
-</details>
-
 # Usage
 
-## Prerequisites
-- Node 20.js or higher and npm.
-- Docker Desktop (if you want to run the entire stack locally, more details to follow).
-
-There are two ways to run the project:
-1. Run the full stack locally. No signups required.
-2. Connect your local client to PowerSync Cloud and Supabase.
-
-After cloning the repository, navigate to the project directory and install the dependencies:
+## Install dependencies
 
 ```bash
-cd vite-react-ts-powersync-supabase
 npm install
 ```
 
-## Local Setup
+## Local Development
 
-First, copy the environment template file:
+###  Prerequisites
+- Docker Desktop
+- [Supabase CLI](supabase.com/docs/guides/local-development/cli/getting-started)
+
+Follow the two steps below to run the entire PowerSync + Supabase stack locally using Docker without requiring any sign up.
+
+1. Copy the environment template file:
 ```bash
 cp .env.local.template .env.local
 ```
-Then run the start-up commands for the various services:
+
+2. Run the start-up commands for the various services:
 ```bash
 npm run dev:supabase
 npm run dev:powersync
@@ -83,9 +34,11 @@ npm run dev:ui
 
 Navigate to the local Vite URL e.g. http://localhost:5173/ Voilà!
 
-## Cloud Setup
+## Cloud Development
 
-###  Requirements
+To run the hosted versions of PowerSync + Supabase, follow the steps below.
+
+###  Prerequisites
 
 | Tool/Service     | Version / Info             | Notes                                                  |
 |------------------|----------------------------|--------------------------------------------------------|
@@ -110,7 +63,7 @@ Follow these steps to set up your backend with Supabase and PowerSync (Or you ca
 <details>
 <summary><strong>Option 2: Setup using the Supabase CLI</strong></summary>
 
-If you prefer using the Supabase CLI, you can set up your project as follows:
+If you prefer using the Supabase CLI to develop the database locally and push it to a Supabase cloud later, you can set up your project as follows:
 1. Login to your Supabase Account `npx supabase login`
 2. Initialize your project `npx supabase init`
 3. Enable "anonymous sign-ins" for the project [here](https://supabase.com/dashboard/project/_/auth/providers)
@@ -244,3 +197,15 @@ VITE_POWERSYNC_URL=
 2. Select your project
 3. Navigate to your PowerSync instance
 4. Copy the "Instance URL" for `VITE_POWERSYNC_URL`
+
+<details>
+<summary><strong>4. Start with bolt.new</strong></summary>
+
+Start the project using [bolt.new](https://bolt.new):
+
+- Open this [link](https://bolt.new/github.com/powersync-community/vite-react-ts-powersync-supabase/tree/main) to load the project.
+   - You will see a configuration error in the preview window because the `.env.local` file has not yet been defined.
+- Create a new `.env.local` file and populate it with the appropriate Supabase and PowerSync credentials, as specified in the `.env.local.template` file included in this repository (refer to step 4 "Set up environment").
+- Save the file — the app should launch automatically.
+
+</details>
