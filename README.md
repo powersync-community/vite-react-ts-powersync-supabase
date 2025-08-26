@@ -4,7 +4,7 @@
 
 A templated Vite, TS, React, PowerSync and Supabase project to get you started quickly with building offline-first applications with PowerSync and Supabase.
 
-# Getting Started
+# How to use this template
 
 There are a few ways you can use this template. We recommend using the first option for a quick start.
 
@@ -53,6 +53,10 @@ Start the project using [bolt.new](https://bolt.new):
 
 # Usage
 
+## Prerequisites
+- Node 20.js or higher and npm.
+- Docker Desktop (if you want to run the entire stack locally, more details to follow).
+
 There are two ways to run the project:
 1. Run the full stack locally. No signups required.
 2. Connect your local client to PowerSync Cloud and Supabase.
@@ -77,7 +81,7 @@ npm run dev:powersync
 npm run dev:ui
 ```
 
-Navigate to the local Vite URL e.g. http://localhost:5173/
+Navigate to the local Vite URL e.g. http://localhost:5173/ Voilà!
 
 ## Cloud Setup
 
