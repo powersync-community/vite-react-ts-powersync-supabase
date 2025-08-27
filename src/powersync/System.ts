@@ -2,6 +2,9 @@ import {
   createBaseLogger,
   LogLevel,
   PowerSyncDatabase,
+  SyncClientImplementation,
+  WASQLiteOpenFactory,
+  WASQLiteVFS,
 } from "@powersync/web";
 import { AppSchema } from "./AppSchema";
 import { connector } from "./SupabaseConnector";
@@ -15,13 +18,13 @@ logger.setLevel(LogLevel.DEBUG);
  * ✅ Use this for: Simple setup, most browsers
  * ❌ Avoid if: You need Safari support or have stability issues
  */
-export const powerSync = new PowerSyncDatabase({
-  schema: AppSchema,
-  database: {
-    dbFilename: 'example.db'
-  },
-  logger: logger
-});
+// export const powerSync = new PowerSyncDatabase({
+//   schema: AppSchema,
+//   database: {
+//     dbFilename: 'example.db'
+//   },
+//   logger: logger
+// });
 
 /**
  * Alternative configuration with OPFS storage (Origin Private File System)
@@ -41,20 +44,20 @@ export const powerSync = new PowerSyncDatabase({
  * 
  * 📚 Learn more: https://docs.powersync.com/client-sdk-references/javascript-web#sqlite-virtual-file-systems
  */
-// export const powerSync = new PowerSyncDatabase({
-//   database: new WASQLiteOpenFactory({
-//     dbFilename: "exampleVFS.db",
-//     vfs: WASQLiteVFS.OPFSCoopSyncVFS, // Use AccessHandlePoolVFS for single-tab only
-//     flags: {
-//       enableMultiTabs: typeof SharedWorker !== "undefined",
-//     },
-//   }),
-//   flags: {
-//     enableMultiTabs: typeof SharedWorker !== "undefined",
-//   },
-//   schema: AppSchema,
-//   logger: logger,
-// });
+export const powerSync = new PowerSyncDatabase({
+  database: new WASQLiteOpenFactory({
+    dbFilename: "exampleVFS.db",
+    vfs: WASQLiteVFS.OPFSCoopSyncVFS, // Use AccessHandlePoolVFS for single-tab only
+    flags: {
+      enableMultiTabs: typeof SharedWorker !== "undefined",
+    },
+  }),
+  flags: {
+    enableMultiTabs: typeof SharedWorker !== "undefined",
+  },
+  schema: AppSchema,
+  logger: logger,
+});
 
 /**
  * Quick Decision Guide:
@@ -69,4 +72,5 @@ export const powerSync = new PowerSyncDatabase({
 await connector.signInAnonymously();
 
 // Establish connection between PowerSync and the Supabase connector
-powerSync.connect(connector);
+powerSync.connect(connector, { clientImplementation: SyncClientImplementation.RUST });
+// powerSync.connect(connector);
