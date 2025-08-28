@@ -82,7 +82,7 @@ If you prefer using the Supabase CLI to develop the database locally and push it
 
 2. In the "Edit Instance" dialog that follows, click on the "Connections" tab:
    - Click on the "+" button to create a new database connection.
-   - Input the credentials from the project you created in Supabase. In the Supabase dashboard, under your project you can go to "Project Settings" and then "Database" and choose "URI" under "Connection string", **untick the "Use connection pooling" option** to use the direct connection, and then copy & paste the connection string into the PowerSync dashboard "URI" field, and then enter your database password at the "Password" field.
+   - Input the credentials from the project you created in Supabase. Go to [this page](https://supabase.com/dashboard/project/_?showConnect=true), copy & paste the connection string into the PowerSync dashboard "URI" field, and then enter your database password at the "Password" field. However, we do recommend using a dedicated database user for PowerSync, please refer to the [Source database guide](https://docs.powersync.com/installation/database-setup#2-create-a-powersync-database-user)
    - Click the "Test connection" button and you should see "Connection success!"
 
 3. Click on the "Credentials" tab of the "Edit Instance" dialog:
