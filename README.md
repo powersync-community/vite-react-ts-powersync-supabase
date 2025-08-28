@@ -154,25 +154,16 @@ VITE_SUPABASE_ANON_KEY=
 VITE_POWERSYNC_URL=
 ```
 
-### How to get these values:
+**Where do you get these values?**
 
-**VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY:**
+For Supabase, you can get both settings directly from:
+- VITE_SUPABASE_URL - [API Settings & URL](https://supabase.com/dashboard/project/_/settings/api)
+- VITE_SUPABASE_ANON_KEY - [API Keys](https://supabase.com/dashboard/project/_/settings/api-keys)
 
-**Quick Access:** For convenience, you can access both settings directly:
-- [API Settings & URL](https://supabase.com/dashboard/project/_/settings/api)
-- [API Keys](https://supabase.com/dashboard/project/_/settings/api-keys)
-
-**Detailed Instructions:**
-1. Go to your [Supabase Dashboard](https://app.supabase.com)
-2. Select your project
-3. For the URL: Navigate to Project Settings → Data API and copy the "Project URL" for `VITE_SUPABASE_URL`
-4. For the key: Navigate to Project Settings → API Keys and copy the "anon public" key for `VITE_SUPABASE_ANON_KEY`
-
-**VITE_POWERSYNC_URL:**
+For PowerSync, follow these steps:
 1. Go to your [PowerSync Dashboard](https://powersync.journeyapps.com/)
-2. Select your project
-3. Navigate to your PowerSync instance
-4. Copy the "Instance URL" for `VITE_POWERSYNC_URL`
+2. Navigate to your PowerSync instance
+3. Copy the "Instance URL" for `VITE_POWERSYNC_URL`
 
 ## Use this project with bolt.new
 
