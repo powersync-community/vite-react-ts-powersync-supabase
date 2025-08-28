@@ -105,13 +105,11 @@ If you don't have a PowerSync account yet, [sign up here](https://accounts.journ
    - Search for "Create Personal Access Token"
    - Give it "owner" policy and a descriptive label
    - Copy the generated token
-
 2. **Initialize the CLI and authenticate:**
    ```bash
    npx powersync init
    ```
 Paste your Personal Access Token when prompted.
-
 3. **Create a new PowerSync instance:**
    ```bash
    npx powersync instance create
@@ -123,7 +121,6 @@ Follow the prompts to configure:
 - When asked about Supabase auth, answer:
    - `? Are you using Supabase auth? Yes`
    - `? Do you want to add audiences? No`
-
 4. **Deploy sync rules:**
    ```bash
    npx powersync instance sync-rules deploy -f sync-rules.yaml
