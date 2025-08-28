@@ -139,8 +139,7 @@ Follow the prompts to configure:
 2. In the [PowerSync dashboard](https://powersync.journeyapps.com/), paste that into the 'sync-rules.yaml' editor panel.
 3. Click the "Deploy sync rules" button and select your PowerSync instance from the drop-down list.
 
-
-#### 4. Set up environment
+#### 4. Set environment variables
 
 First, copy the environment template file:
 ```bash
