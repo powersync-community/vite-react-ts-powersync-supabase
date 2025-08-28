@@ -143,7 +143,7 @@ Follow the prompts to configure:
 
 First, copy the environment template file:
 ```bash
-cp .env.local.template .env.local
+cp .env.cloud.template .env.local
 ```
 
 Then set the following environment variables in your `.env.local` file:
