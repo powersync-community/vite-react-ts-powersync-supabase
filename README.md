@@ -15,7 +15,8 @@ npm install
 ## Local Development
 
 ###  Prerequisites
-- Docker Desktop
+You will need the following tools installed on your local machine:
+- [Docker](https://docs.docker.com/get-docker/)
 - [Supabase CLI](supabase.com/docs/guides/local-development/cli/getting-started)
 
 Follow the two steps below to run the entire PowerSync + Supabase stack locally using Docker without requiring any sign up.
