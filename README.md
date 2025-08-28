@@ -15,22 +15,23 @@ npm install
 ## Local Development
 
 ###  Prerequisites
-- Docker Desktop
+You will need the following tools installed on your local machine:
+- [Docker](https://docs.docker.com/get-docker/)
 - [Supabase CLI](supabase.com/docs/guides/local-development/cli/getting-started)
 
 Follow the two steps below to run the entire PowerSync + Supabase stack locally using Docker without requiring any sign up.
 
 1. Copy the environment template file:
-```bash
-cp .env.local.template .env.local
-```
+   ```bash
+   cp .env.local.template .env.local
+   ```
 
 2. Run the start-up commands for the various services:
-```bash
-npm run dev:supabase
-npm run dev:powersync
-npm run dev:ui
-```
+   ```bash
+   npm run dev:supabase
+   npm run dev:powersync
+   npm run dev:ui
+   ```
 
 Navigate to the local Vite URL e.g. http://localhost:5173/ Voilà!
 
@@ -38,7 +39,7 @@ Navigate to the local Vite URL e.g. http://localhost:5173/ Voilà!
 
 To run the hosted versions of PowerSync + Supabase, follow the steps below.
 
-###  Prerequisites
+### Prerequisites
 
 | Tool/Service     | Version / Info             | Notes                                                  |
 |------------------|----------------------------|--------------------------------------------------------|
@@ -49,19 +50,15 @@ To run the hosted versions of PowerSync + Supabase, follow the steps below.
 This section guides you through setting up the backend using Supabase and PowerSync. Follow the steps below to configure your backend environment.
 
 #### 1. Setup Supabase
-Follow these steps to set up your backend with Supabase and PowerSync (Or you can follow the [guide](https://docs.powersync.com/integration-guides/supabase-+-powersync)).
+Follow these steps to set up your backend with Supabase and PowerSync (or you can follow the [guide](https://docs.powersync.com/integration-guides/supabase-+-powersync)).
 
-<details>
-<summary><strong>Option 1: Setup using the Supabase Dashboard</strong></summary>
 
 1. [Create a new project on the Supabase dashboard](https://supabase.com/dashboard/projects).
 2. Go to the Supabase SQL Editor for your new project and execute the SQL statements in [database.pgsql](database.pgsql) to create the database schema, database functions, and publication needed for PowerSync.
 3. Enable "anonymous sign-ins" for the project [here](https://supabase.com/dashboard/project/_/auth/providers) (demo specific)
 
-</details>
-
 <details>
-<summary><strong>Option 2: Setup using the Supabase CLI</strong></summary>
+<summary><strong>Alternative: Setup using the Supabase CLI</strong></summary>
 
 If you prefer using the Supabase CLI to develop the database locally and push it to a Supabase cloud later, you can set up your project as follows:
 1. Login to your Supabase Account `npx supabase login`
@@ -79,30 +76,21 @@ If you prefer using the Supabase CLI to develop the database locally and push it
 
 #### 2. Setup PowerSync Instance and Connect to Supabase
 
-You can set up your PowerSync instance using either the Dashboard or CLI approach:
-
-<details>
-<summary><strong>Option 1: Setup using the PowerSync Dashboard</strong></summary>
-
-If you prefer using the web interface:
-
 1. In the [PowerSync dashboard](https://powersync.journeyapps.com/), create a new PowerSync instance:
    - Right-click on 'PowerSync Project' in the project tree on the left and click "Create new instance"
    - Pick a name for the instance e.g. "PowerSyncDemoInstance" and proceed.
 
 2. In the "Edit Instance" dialog that follows, click on the "Connections" tab:
    - Click on the "+" button to create a new database connection.
-   - Input the credentials from the project you created in Supabase. In the Supabase dashboard, under your project you can go to "Project Settings" and then "Database" and choose "URI" under "Connection string", **untick the "Use connection pooling" option** to use the direct connection, and then copy & paste the connection string into the PowerSync dashboard "URI" field, and then enter your database password at the "Password" field.
+   - Input the credentials from the project you created in Supabase. Go to [this page](https://supabase.com/dashboard/project/_?showConnect=true), copy & paste the connection string into the PowerSync dashboard "URI" field, and then enter your database password at the "Password" field. However, we do recommend using a dedicated database user for PowerSync, please refer to the [Source database guide](https://docs.powersync.com/installation/database-setup#2-create-a-powersync-database-user)
    - Click the "Test connection" button and you should see "Connection success!"
 
 3. Click on the "Credentials" tab of the "Edit Instance" dialog:
    - Tick the "Use Supabase Auth" checkbox and configure the JWT secret.
    - Click "Save" to save all the changes to your PowerSync instance. The instance will now be deployed — this may take a minute or two.
 
-</details>
-
 <details>
-<summary><strong>Option 2: Setup using the PowerSync CLI</strong></summary>
+<summary><strong>Alternative: Setup using the PowerSync CLI</strong></summary>
 
 See [PowerSync CLI docs](https://docs.powersync.com/usage/tools/cli).
 
@@ -117,13 +105,11 @@ If you don't have a PowerSync account yet, [sign up here](https://accounts.journ
    - Search for "Create Personal Access Token"
    - Give it "owner" policy and a descriptive label
    - Copy the generated token
-
 2. **Initialize the CLI and authenticate:**
    ```bash
    npx powersync init
    ```
 Paste your Personal Access Token when prompted.
-
 3. **Create a new PowerSync instance:**
    ```bash
    npx powersync instance create
@@ -135,7 +121,6 @@ Follow the prompts to configure:
 - When asked about Supabase auth, answer:
    - `? Are you using Supabase auth? Yes`
    - `? Do you want to add audiences? No`
-
 4. **Deploy sync rules:**
    ```bash
    npx powersync instance sync-rules deploy -f sync-rules.yaml
@@ -145,29 +130,17 @@ Follow the prompts to configure:
 
 </details>
 
-#### 3. Deploy Sync Rules
-
-<details>
-<summary><strong>Option 1: Using CLI (if you used CLI setup above)</strong></summary>
-
-The sync rules are already deployed if you followed the CLI setup steps above.
-
-</details>
-
-<details>
-<summary><strong>Option 2: Using Dashboard</strong></summary>
+#### 3. Deploy Sync Rules (not needed if using PowerSync CLI)
 
 1. Open the [sync-rules.yaml](sync-rules.yaml) in this repo and copy the contents.
 2. In the [PowerSync dashboard](https://powersync.journeyapps.com/), paste that into the 'sync-rules.yaml' editor panel.
 3. Click the "Deploy sync rules" button and select your PowerSync instance from the drop-down list.
 
-</details>
-
-#### 4. Set up environment
+#### 4. Set environment variables
 
 First, copy the environment template file:
 ```bash
-cp .env.local.template .env.local
+cp .env.cloud.template .env.local
 ```
 
 Then set the following environment variables in your `.env.local` file:
@@ -178,25 +151,16 @@ VITE_SUPABASE_ANON_KEY=
 VITE_POWERSYNC_URL=
 ```
 
-### How to get these values:
+**Where do you get these values?**
 
-**VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY:**
+For Supabase, you can get both settings directly from:
+- VITE_SUPABASE_URL - [API Settings & URL](https://supabase.com/dashboard/project/_/settings/api)
+- VITE_SUPABASE_ANON_KEY - [API Keys](https://supabase.com/dashboard/project/_/settings/api-keys)
 
-**Quick Access:** For convenience, you can access both settings directly:
-- [API Settings & URL](https://supabase.com/dashboard/project/_/settings/api)
-- [API Keys](https://supabase.com/dashboard/project/_/settings/api-keys)
-
-**Detailed Instructions:**
-1. Go to your [Supabase Dashboard](https://app.supabase.com)
-2. Select your project
-3. For the URL: Navigate to Project Settings → Data API and copy the "Project URL" for `VITE_SUPABASE_URL`
-4. For the key: Navigate to Project Settings → API Keys and copy the "anon public" key for `VITE_SUPABASE_ANON_KEY`
-
-**VITE_POWERSYNC_URL:**
+For PowerSync, follow these steps:
 1. Go to your [PowerSync Dashboard](https://powersync.journeyapps.com/)
-2. Select your project
-3. Navigate to your PowerSync instance
-4. Copy the "Instance URL" for `VITE_POWERSYNC_URL`
+2. Navigate to your PowerSync instance
+3. Copy the "Instance URL" for `VITE_POWERSYNC_URL`
 
 ## Use this project with bolt.new
 
