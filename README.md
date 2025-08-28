@@ -22,16 +22,16 @@ You will need the following tools installed on your local machine:
 Follow the two steps below to run the entire PowerSync + Supabase stack locally using Docker without requiring any sign up.
 
 1. Copy the environment template file:
-```bash
-cp .env.local.template .env.local
-```
+   ```bash
+   cp .env.local.template .env.local
+   ```
 
 2. Run the start-up commands for the various services:
-```bash
-npm run dev:supabase
-npm run dev:powersync
-npm run dev:ui
-```
+   ```bash
+   npm run dev:supabase
+   npm run dev:powersync
+   npm run dev:ui
+   ```
 
 Navigate to the local Vite URL e.g. http://localhost:5173/ Voilà!
 
