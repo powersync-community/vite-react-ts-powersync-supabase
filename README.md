@@ -52,17 +52,13 @@ This section guides you through setting up the backend using Supabase and PowerS
 #### 1. Setup Supabase
 Follow these steps to set up your backend with Supabase and PowerSync (or you can follow the [guide](https://docs.powersync.com/integration-guides/supabase-+-powersync)).
 
-<details>
-<summary><strong>Option 1: Setup using the Supabase Dashboard</strong></summary>
 
 1. [Create a new project on the Supabase dashboard](https://supabase.com/dashboard/projects).
 2. Go to the Supabase SQL Editor for your new project and execute the SQL statements in [database.pgsql](database.pgsql) to create the database schema, database functions, and publication needed for PowerSync.
 3. Enable "anonymous sign-ins" for the project [here](https://supabase.com/dashboard/project/_/auth/providers) (demo specific)
 
-</details>
-
 <details>
-<summary><strong>Option 2: Setup using the Supabase CLI</strong></summary>
+<summary><strong>Alternative: Setup using the Supabase CLI</strong></summary>
 
 If you prefer using the Supabase CLI to develop the database locally and push it to a Supabase cloud later, you can set up your project as follows:
 1. Login to your Supabase Account `npx supabase login`
@@ -80,13 +76,6 @@ If you prefer using the Supabase CLI to develop the database locally and push it
 
 #### 2. Setup PowerSync Instance and Connect to Supabase
 
-You can set up your PowerSync instance using either the Dashboard or CLI approach:
-
-<details>
-<summary><strong>Option 1: Setup using the PowerSync Dashboard</strong></summary>
-
-If you prefer using the web interface:
-
 1. In the [PowerSync dashboard](https://powersync.journeyapps.com/), create a new PowerSync instance:
    - Right-click on 'PowerSync Project' in the project tree on the left and click "Create new instance"
    - Pick a name for the instance e.g. "PowerSyncDemoInstance" and proceed.
@@ -100,10 +89,8 @@ If you prefer using the web interface:
    - Tick the "Use Supabase Auth" checkbox and configure the JWT secret.
    - Click "Save" to save all the changes to your PowerSync instance. The instance will now be deployed — this may take a minute or two.
 
-</details>
-
 <details>
-<summary><strong>Option 2: Setup using the PowerSync CLI</strong></summary>
+<summary><strong>Alternative: Setup using the PowerSync CLI</strong></summary>
 
 See [PowerSync CLI docs](https://docs.powersync.com/usage/tools/cli).
 
@@ -146,23 +133,12 @@ Follow the prompts to configure:
 
 </details>
 
-#### 3. Deploy Sync Rules
-
-<details>
-<summary><strong>Option 1: Using CLI (if you used CLI setup above)</strong></summary>
-
-The sync rules are already deployed if you followed the CLI setup steps above.
-
-</details>
-
-<details>
-<summary><strong>Option 2: Using Dashboard</strong></summary>
+#### 3. Deploy Sync Rules (not needed if using PowerSync CLI)
 
 1. Open the [sync-rules.yaml](sync-rules.yaml) in this repo and copy the contents.
 2. In the [PowerSync dashboard](https://powersync.journeyapps.com/), paste that into the 'sync-rules.yaml' editor panel.
 3. Click the "Deploy sync rules" button and select your PowerSync instance from the drop-down list.
 
-</details>
 
 #### 4. Set up environment
 
