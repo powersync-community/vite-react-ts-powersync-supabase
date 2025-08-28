@@ -39,7 +39,7 @@ Navigate to the local Vite URL e.g. http://localhost:5173/ Voilà!
 
 To run the hosted versions of PowerSync + Supabase, follow the steps below.
 
-###  Prerequisites
+### Prerequisites
 
 | Tool/Service     | Version / Info             | Notes                                                  |
 |------------------|----------------------------|--------------------------------------------------------|
@@ -50,7 +50,7 @@ To run the hosted versions of PowerSync + Supabase, follow the steps below.
 This section guides you through setting up the backend using Supabase and PowerSync. Follow the steps below to configure your backend environment.
 
 #### 1. Setup Supabase
-Follow these steps to set up your backend with Supabase and PowerSync (Or you can follow the [guide](https://docs.powersync.com/integration-guides/supabase-+-powersync)).
+Follow these steps to set up your backend with Supabase and PowerSync (or you can follow the [guide](https://docs.powersync.com/integration-guides/supabase-+-powersync)).
 
 <details>
 <summary><strong>Option 1: Setup using the Supabase Dashboard</strong></summary>
