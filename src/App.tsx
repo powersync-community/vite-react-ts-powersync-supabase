@@ -1,184 +1,108 @@
 import "./App.css";
-import { useQuery, useStatus } from "@powersync/react";
-import { COUNTER_TABLE, type CounterRecord } from "./powersync/AppSchema";
 import { useEffect, useState } from "react";
-import { powerSync } from "./powersync/System";
+import { useTodosQuery } from "./TestHooks";
 import { connector } from "./powersync/SupabaseConnector";
 
 function App() {
   const [userID, setUserID] = useState<string | null>(null);
-  const status = useStatus();
+  const [filters] = useState({
+    completed: false,
+    limit: 50
+  });
 
-  // Example of a watch query using useQuery hook
-  // This demonstrates how to fetch and automatically update data when the underlying table changes
-  // using an incremental watch query - see here https://docs.powersync.com/usage/use-case-examples/watch-queries#incremental-watch-queries
-  const { data: counters, isLoading } = useQuery<CounterRecord>(
-    `SELECT * FROM ${COUNTER_TABLE} ORDER BY created_at ASC`,
-    [],
-    {
-      rowComparator: {
-        keyBy: (item) => item.id,
-        compareBy: (item) => JSON.stringify(item)
-      }
-    }
-  );
+  const { data: complexTodos, simpleData: simpleTodos, isLoading: todosLoading, error: todosError } = useTodosQuery(filters);
 
-  // Get the current authenticated user's ID from Supabase on component mount
   useEffect(() => {
     const getCurrentUser = async () => {
       const { data: { user } } = await connector.client.auth.getUser();
       setUserID(user?.id || null);
     };
-
     getCurrentUser();
   }, []);
 
-  // Example of executing a native SQLite query using PowerSync
-  // This demonstrates how to directly execute SQL commands for data mutations
-  const updateCounter = async (counter: CounterRecord, newCount: number) => {
-    try {
-      return await powerSync.execute(
-        `UPDATE ${COUNTER_TABLE} SET count = ? WHERE owner_id = ?`,
-        [newCount, counter.owner_id]
-      );
-    } catch (err) {
-      console.error("Error updating counter:", err);
-    }
-  };
+  if (todosLoading) {
+    return <div className="loading-state">Loading...</div>;
+  }
+  if (todosError) {
+    return <div className="error-state">Error: {todosError.message}</div>;
+  }
 
-  // Function to create a new counter record for the current user
-  // Uses native SQLite execution through PowerSync for data insertion
-  const createCounter = async () => {
-    // Ensure user is authenticated before creating counter
-    if (!userID) {
-      // If still no userID after fetch, don't proceed
-      if (!userID) {
-        console.error("Cannot create counter: No authenticated user");
-        return;
+  // Find differences
+  const differences: { type: string; todo?: { list_name: string; list_created_at: string; list_owner_id: string; total_todos: number; completed_todos: number; overdue_todos: number; days_since_created: number; is_overdue: number; id: string; list_id: string; created_at: string; completed_at: string | null; description: string; created_by: string; completed_by: string | null; completed: number; }; complex?: { list_name: string; list_created_at: string; list_owner_id: string; total_todos: number; completed_todos: number; overdue_todos: number; days_since_created: number; is_overdue: number; id: string; list_id: string; created_at: string; completed_at: string | null; description: string; created_by: string; completed_by: string | null; completed: number; }; simple?: { list_name: string; list_created_at: string; list_owner_id: string; total_todos: number; completed_todos: number; overdue_todos: number; days_since_created: number; is_overdue: number; id: string; list_id: string; created_at: string; completed_at: string | null; description: string; created_by: string; completed_by: string | null; completed: number; } | undefined; }[] = [];
+  const simpleIds = new Set(simpleTodos?.map(todo => todo.id));
+  const complexIds = new Set(complexTodos?.map(todo => todo.id));
+
+  // Check for items only in complexTodos
+  complexTodos?.forEach(cTodo => {
+    if (!simpleIds.has(cTodo.id)) {
+      differences.push({ type: 'Only in Complex', todo: cTodo });
+    } else {
+      // Check for content differences
+      const sTodo = simpleTodos.find(st => st.id === cTodo.id);
+      if (JSON.stringify(cTodo) !== JSON.stringify(sTodo)) {
+        differences.push({ type: 'Content Mismatch', complex: cTodo, simple: sTodo });
       }
     }
+  });
 
-    try {
-      // Insert new counter with generated UUID, current user ID, and initial count of 0
-      await powerSync.execute(
-        `INSERT INTO ${COUNTER_TABLE} (id, owner_id, count, created_at) VALUES (uuid(), ?, ?, ?)`,
-        [userID, 0, new Date().toISOString()]
-      );
-    } catch (err) {
-      console.error("Error creating counter:", err);
+  // Check for items only in simpleTodos
+  simpleTodos?.forEach(sTodo => {
+    if (!complexIds.has(sTodo.id)) {
+      differences.push({ type: 'Only in Simple', todo: sTodo });
     }
-  };
+  });
 
   return (
-    <div className="app-container">
-      {/* Top row with Status, Logo, and Helpful Links in a grid like counter-grid */}
-      <div className="top-grid">
-        <div className="status-card">
-          <h3>PowerSync Status</h3>
-          <div className="mono-text">
-            {/* SDK version of the rust core extension and it's hash - see here https://github.com/powersync-ja/powersync-sqlite-core/releases */}
-            <div><strong>SDK Version:</strong> {powerSync.sdkVersion}</div>
-            {status && (
-              <>
-                <div><strong>connected:</strong> {status.connected.toString()}</div>
-                <div><strong>connecting:</strong> {status.connecting.toString()}</div>
-                <div><strong>uploading:</strong> {status.dataFlowStatus?.uploading?.toString()}</div>
-                <div><strong>downloading:</strong> {status.dataFlowStatus?.downloading?.toString()}</div>
-                <div>
-                  <strong>downloadProgress:</strong>{" "}
-                  {status.downloadProgress?.downloadedFraction != null
-                    ? `${(status.downloadProgress.downloadedFraction * 100).toFixed(2)}%`
-                    : "0%"}
-                </div>
-                <div><strong>hasSynced:</strong> {status.hasSynced?.toString() ?? "false"}</div>
-                <div><strong>lastSyncedAt:</strong> {status.lastSyncedAt?.toLocaleString() ?? "N/A"}</div>
-
-                <div><strong>User ID:</strong> {userID || "Not authenticated"}</div>
-              </>
-            )}
+    <div className="main-container">
+      <div className="content-wrapper">
+        <h1 className="title-heading">Todo Query Comparison</h1>
+        
+        <div className="counts-section">
+          <div className="count-card">
+            <h3>Complex Query Count</h3>
+            <p className="count-value">{complexTodos?.length ?? 0}</p>
+          </div>
+          <div className="count-card">
+            <h3>Simple Query Count</h3>
+            <p className="count-value">{simpleTodos?.length ?? 0}</p>
           </div>
         </div>
 
-        <div className="logo-card">
-          <img src="/icons/icon.png" alt="Logo" className="logo-image" />
-        </div>
+        <div className="divider" />
 
-        <div className="links-card">
-          <h3>Helpful Links</h3>
-          <ul className="links-list">
-            <li>
-              <a href="https://docs.powersync.com" target="_blank" rel="noopener noreferrer">
-                PowerSync Documentation
-              </a>
-            </li>
-            <li>
-              <a href="https://accounts.journeyapps.com/portal" target="_blank" rel="noopener noreferrer">
-                PowerSync Dashboard Portal
-              </a>
-            </li>
-            <li>
-              <a href="https://docs.powersync.com/usage/sync-rules" target="_blank" rel="noopener noreferrer">
-                PowerSync Sync Rules
-              </a>
-            </li>
-            <li>
-              <a href="https://app.supabase.com" target="_blank" rel="noopener noreferrer">
-                Supabase Dashboard
-              </a>
-            </li>
-            <li>
-              <a href="https://docs.powersync.com/integration-guides/supabase-+-powersync" target="_blank" rel="noopener noreferrer">
-                Supabase + PowerSync Guide
-              </a>
-            </li>
-            <li>
-              <a href="https://supabase.com/docs/guides/auth" target="_blank" rel="noopener noreferrer">
-                Supabase Auth Guide
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      {isLoading ? (
-        <div>Loading...</div>
-      ) : (
-        <>
-          {/* Show authentication status or create counter button */}
-          {!userID ? (
-            <p>Please sign in to create a counter.</p>
-          ) : (
-            <>
-              {/* Only visible if the current user has not created a counter */}
-              {!counters.some((c) => c.owner_id === userID) && (
-                <div className="centered">
-                  <button onClick={createCounter} className="primary-button">
-                    Create Counter
-                  </button>
-                </div>
-              )}
-
-              <div className="counter-grid">
-                {counters.map((counter) => (
-                  <div key={counter.owner_id} className="counter-card">
-                    <p>Counter for Id: {counter.owner_id}</p>
-                    <p className="counter-count">Count: {counter.count}</p>
-                    <p className="counter-date">
-                      Created at: <strong>{new Date(counter.created_at ?? '').toLocaleString()}</strong>
-                    </p>
-                    <button
-                      onClick={() => updateCounter(counter, (counter.count ?? 0) + 1)}
-                      className="primary-button"
-                    >
-                      Increment
-                    </button>
+        <h2 className="differences-heading">Differences Found</h2>
+        {differences.length > 0 ? (
+          <div className="differences-list">
+            {differences.map((diff, index) => (
+              <div key={index} className="difference-item">
+                <h3 className="difference-type">{diff.type}</h3>
+                {diff.type === 'Content Mismatch' ? (
+                  <div className="mismatch-details">
+                    <p className="item-id"><strong>ID:</strong> {diff.complex!.id}</p>
+                    <div className="data-pair">
+                      <div className="data-view">
+                        <h4>Complex</h4>
+                        <pre className="json-data">{JSON.stringify(diff.complex, null, 2)}</pre>
+                      </div>
+                      <div className="data-view">
+                        <h4>Simple</h4>
+                        <pre className="json-data">{JSON.stringify(diff.simple, null, 2)}</pre>
+                      </div>
+                    </div>
                   </div>
-                ))}
+                ) : (
+                  <div className="solo-item-details">
+                    <p className="item-id"><strong>ID:</strong> {diff.todo!.id}</p>
+                    <pre className="json-data">{JSON.stringify(diff.todo, null, 2)}</pre>
+                  </div>
+                )}
               </div>
-            </>
-          )}
-        </>
-      )}
+            ))}
+          </div>
+        ) : (
+          <p className="no-differences-message">🥳 No differences found between the complex and simple query results. The data is consistent! 🎉</p>
+        )}
+      </div>
     </div>
   );
 }
