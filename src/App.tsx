@@ -1,154 +1,141 @@
 import "./App.css";
 import { COUNTER_TABLE, type CounterRecord } from "./powersync/AppSchema";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { powerSync } from "./powersync/System";
 
-const LIMIT_INCREMENT = 4;
+const LIMIT_INCREMENT = 3;
 
 function App() {
-  const [offset, setOffset] = useState(0);
+  const [lastId, setLastId] = useState<string>(""); // Track the last ID for pagination
   const [data, setData] = useState<CounterRecord[]>([]);
-  const lastItemRef = useRef<HTMLDivElement>(null);
+  const diffQueryRef = useRef<any>(null); // Ref to hold the differential watched query
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
-  console.log("Data length:", data.length);
+  console.log("Data length:", data.length, "Last ID:", lastId);
 
-  // Watch query for counters
+  // Initialize and update the differential query when lastId changes
   useEffect(() => {
-    // Get last id of the current data
-    const lastId = data.length > 0
-      ? data[data.length - 1].id
-      : "";
-
-    // Query for new data, order by id ascending, limit to LIMIT_INCREMENT
-    const query = powerSync
-      .query<CounterRecord>({
-        sql: `
+    console.log("Creating query with lastId:", lastId);
+    // Create the query with the current lastId and limit
+    const baseQuery = powerSync.query<CounterRecord>({
+      sql: `
         SELECT *
         FROM ${COUNTER_TABLE}
         WHERE id > ?
         ORDER BY id ASC
         LIMIT ?
       `,
-        parameters: [lastId, LIMIT_INCREMENT],
-      })
-      .differentialWatch()
-
-    const dispose = query.registerListener({
-      onError: (err) => {
-        console.error("Query error:", err);
-      },
-      onData: (rows) => {
-        // setData((prev) => {
-        //   const existingIds = new Set(prev.map(r => r.id));
-        //   const newRows = (rows as CounterRecord[]).filter(r => !existingIds.has(r.id));
-        //   return [...prev, ...newRows]; // no duplicates
-        // });
-        // setData(data => [...data, ...rows]);
-        setData((prev) => [...prev, ...rows]);
-      },
-      // onDiff: (diff) => {
-      //   console.log("Diff:", diff);
-      // }
-      // onData: (rows) => {
-      //   // Only add new rows for initial load, onDiff will handle updates
-      //   // if (rows.length == 0) {
-      //   //   setData((prev) => [...prev, ...rows]);
-      //   // }
-      //   // setData(data => [...data, ...rows]);
-
-      //   // setData((prev) => [...prev, ...rows]);
-      //   // setData([...rows]);
-
-
-      //   // setData((prev) => {
-      //   //   const existingIds = new Set(prev.map(row => row.id));
-      //   //   const newRows = (rows as CounterRecord[]).filter(row => !existingIds.has(row.id));
-      //   //   return [...prev, ...newRows];
-      //   // });
-
-      //   setData((prev) => {
-      //     // Combine previous data and new rows
-      //     const combined = [...prev, ...(rows as CounterRecord[])];
-
-      //     // Use a Map to remove duplicates by id
-      //     const uniqueMap = new Map<string, CounterRecord>();
-      //     for (const row of combined) {
-      //       uniqueMap.set(row.id, row); // later rows overwrite earlier ones
-      //     }
-
-      //     // Return the array of unique rows
-      //     return Array.from(uniqueMap.values());
-      //   });
-
-
-      //   // Make a shallow copy to trigger onDiff
-      //   // setData(() => [...rows]);
-
-      //   // setData((prev) => {
-      //   //   const existingIds = new Set(prev.map(row => row.id));
-      //   //   const newRows = rows.filter((r) => !existingIds.has(r.id));
-
-      //   //   // Always return a new array reference, even if newRows is empty
-      //   //   return [...prev, ...newRows] as CounterRecord[];
-      //   // });
-      // },
-      onDiff: (diff) => {
-        // This callback will be called whenever the data changes.
-        // We need to update the existing data with the updated data
-
-        console.log('Data Added:', diff.added);
-        console.log('Data Updated:', diff.updated);
-        console.log('Data Removed:', diff.removed);
-
-        //Add new rows
-        setData((prev) => {
-          const existingIds = prev.map(row => row.id);
-          console.log("Existing IDs:", existingIds);
-          const newRows = (diff.added as CounterRecord[]).filter(row => !existingIds.includes(row.id));
-          return [...prev, ...newRows];
-        });
-
-        //Update existing rows
-        setData((prev) =>
-          prev.map((row) => {
-            const updatedRow = diff.updated.find(
-              (diffRow) => diffRow.current.id === row.id
-            );
-            return updatedRow ? (updatedRow.current as CounterRecord) : row;
-          })
-        );
-
-        //Remove deleted rows
-        setData((prev) => prev.filter((row) => !diff.removed.some((diffRow) => row.id === diffRow.id)));
-      }
+      parameters: [lastId, LIMIT_INCREMENT],
     });
 
-    return () => {
-      dispose();
-      query.close();
-    };
-  }, [offset]);
+    // Create differential watch
+    const diffQuery = baseQuery.differentialWatch();
 
-  // Load more: just bump the offset
-  const loadMore = () => {
-    setOffset((prev) => prev + LIMIT_INCREMENT);
-  };
+    // Register the listener
+    const dispose = diffQuery.registerListener({
+      onError: (err) => console.error("Query error:", err),
+
+      // onData for initial load
+      onData: (rows) => {
+        console.log("onData received", rows.length, "rows");
+        setData((prev) => {
+          const newRows = rows as CounterRecord[];
+          const updated = [...prev, ...newRows];
+          // Deduplicate by ID
+          const seen = new Set<string>();
+          return updated
+            .filter((row) => {
+              if (seen.has(row.id)) return false;
+              seen.add(row.id);
+              return true;
+            })
+            .sort((a, b) => a.id.localeCompare(b.id));
+        });
+      },
+
+      // onDiff for updates, including new rows from DB changes
+      onDiff: (diff) => {
+        console.log("onDiff received", diff);
+        setData((prev) => {
+          let updated = [...prev];
+
+          // Apply updates to existing rows
+          updated = updated.map((row) => {
+            const u = diff.updated.find((d) => d.current.id === row.id);
+            return u ? (u.current as CounterRecord) : row;
+          });
+
+          // Remove rows that were deleted
+          const removedIds = diff.removed.map((r) => r.id);
+          updated = updated.filter((row) => !removedIds.includes(row.id));
+
+          // Add new rows (from DB changes)
+          const newRows = diff.added as CounterRecord[];
+          console.log("Adding", newRows.length, "new rows");
+          updated = [...updated, ...newRows];
+
+          // Deduplicate by ID
+          const seen = new Set<string>();
+          updated = updated.filter((row) => {
+            if (seen.has(row.id)) return false;
+            seen.add(row.id);
+            return true;
+          });
+
+          // Sort by id to ensure order
+          updated.sort((a, b) => a.id.localeCompare(b.id));
+
+          console.log("Updated data length:", updated.length);
+          return updated;
+        });
+      },
+    });
+
+    // Store the diffQuery in ref
+    diffQueryRef.current = diffQuery;
+
+    return () => {
+      console.log("Cleaning up query with lastId:", lastId);
+      dispose();
+      diffQuery.close();
+    };
+  }, [lastId]); // Re-run when lastId changes
+
+  // Load more: update the lastId to the last row's ID
+  const loadMore = useCallback(() => {
+    console.log("loadMore triggered");
+    setLastId((prev) => {
+      const newLastId = data.length > 0 ? data[data.length - 1].id : prev;
+      console.log("Updating lastId to:", newLastId);
+      return newLastId;
+    });
+  }, [data]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
+    console.log("Setting up IntersectionObserver");
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
+          console.log("Sentinel intersected, triggering loadMore");
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, rootMargin: "20px" }
     );
-    if (lastItemRef.current) observer.observe(lastItemRef.current);
+
+    if (sentinelRef.current) {
+      console.log("Observing sentinel");
+      observer.observe(sentinelRef.current);
+    }
+
     return () => {
-      if (lastItemRef.current) observer.unobserve(lastItemRef.current);
+      if (sentinelRef.current) {
+        console.log("Unobserving sentinel");
+        observer.unobserve(sentinelRef.current);
+      }
     };
-  }, [data]);
+  }, [loadMore]); // Depend on loadMore, which depends on data
 
   return (
     <div className="app-container">
@@ -157,14 +144,10 @@ function App() {
       ) : (
         <div
           className="counter-grid"
-          style={{ maxHeight: "400px", overflowY: "auto" }}
+          style={{ maxHeight: "400px", overflowY: "auto", position: "relative" }}
         >
-          {data.map((counter, index) => (
-            <div
-              key={counter.id}
-              ref={index === data.length - 1 ? lastItemRef : null}
-              className="counter-card"
-            >
+          {data.map((counter) => (
+            <div key={counter.id} className="counter-card">
               <p>Counter ID: {counter.id}</p>
               <p className="counter-count">Count: {counter.count ?? 0}</p>
               <p className="counter-date">
@@ -175,9 +158,15 @@ function App() {
               </p>
             </div>
           ))}
+          {/* Sentinel element for infinite scroll trigger */}
+          <div
+            ref={sentinelRef}
+            style={{ height: "1px", width: "100%", background: "transparent" }}
+          />
         </div>
       )}
     </div>
   );
-};
+}
+
 export default App;
