@@ -3,7 +3,7 @@ import { COUNTER_TABLE, type CounterRecord } from "./powersync/AppSchema";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { powerSync } from "./powersync/System";
 
-const LIMIT_INCREMENT = 3;
+const LIMIT_INCREMENT = 10;
 
 function App() {
   const [lastId, setLastId] = useState<string>(""); // Track the last ID for pagination
@@ -13,10 +13,10 @@ function App() {
 
   console.log("Data length:", data.length, "Last ID:", lastId);
 
-  // Initialize and update the differential query when lastId changes
+  // Initialize the differential query once
   useEffect(() => {
-    console.log("Creating query with lastId:", lastId);
-    // Create the query with the current lastId and limit
+    console.log("Creating initial query with lastId:", lastId);
+    // Create the initial query
     const baseQuery = powerSync.query<CounterRecord>({
       sql: `
         SELECT *
@@ -53,7 +53,7 @@ function App() {
         });
       },
 
-      // onDiff for updates, including new rows from DB changes
+      // onDiff for updates, including new rows from DB changes or parameter updates
       onDiff: (diff) => {
         console.log("onDiff received", diff);
         setData((prev) => {
@@ -69,7 +69,7 @@ function App() {
           const removedIds = diff.removed.map((r) => r.id);
           updated = updated.filter((row) => !removedIds.includes(row.id));
 
-          // Add new rows (from DB changes)
+          // Add new rows (from DB changes or updated lastId)
           const newRows = diff.added as CounterRecord[];
           console.log("Adding", newRows.length, "new rows");
           updated = [...updated, ...newRows];
@@ -99,17 +99,38 @@ function App() {
       dispose();
       diffQuery.close();
     };
-  }, [lastId]); // Re-run when lastId changes
+  }, []); // Run once on mount
 
-  // Load more: update the lastId to the last row's ID
+  // Load more: update lastId and update query parameters
   const loadMore = useCallback(() => {
     console.log("loadMore triggered");
-    setLastId((prev) => {
-      const newLastId = data.length > 0 ? data[data.length - 1].id : prev;
-      console.log("Updating lastId to:", newLastId);
-      return newLastId;
-    });
-  }, [data]);
+    const newLastId = data.length > 0 ? data[data.length - 1].id : lastId;
+    console.log("Updating lastId to:", newLastId);
+
+    const diffQuery = diffQueryRef.current;
+    if (diffQuery) {
+      try {
+        // Create a fresh query object for updateSettings
+        const newQuery = powerSync.query<CounterRecord>({
+          sql: `
+            SELECT *
+            FROM ${COUNTER_TABLE}
+            WHERE id > ?
+            ORDER BY id ASC
+            LIMIT ?
+          `,
+          parameters: [newLastId, LIMIT_INCREMENT],
+        });
+        diffQuery.updateSettings({ query: newQuery });
+        console.log("updateSettings called with lastId:", newLastId);
+        setLastId(newLastId); // Update state after successful updateSettings
+      } catch (error) {
+        console.error("Error calling updateSettings:", error);
+      }
+    } else {
+      console.warn("diffQuery not initialized");
+    }
+  }, [data, lastId]);
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
@@ -135,7 +156,7 @@ function App() {
         observer.unobserve(sentinelRef.current);
       }
     };
-  }, [loadMore]); // Depend on loadMore, which depends on data
+  }, [loadMore]); // Depend on loadMore, which depends on data and lastId
 
   return (
     <div className="app-container">
