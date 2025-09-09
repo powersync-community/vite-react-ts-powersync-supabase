@@ -2,8 +2,9 @@ import "./App.css";
 import { COUNTER_TABLE, type CounterRecord } from "./powersync/AppSchema";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { powerSync } from "./powersync/System";
+import { GetAllQuery } from "@powersync/web"; // Adjust import based on your PowerSync library
 
-const LIMIT_INCREMENT = 10;
+const LIMIT_INCREMENT = 6;
 
 function App() {
   const [lastId, setLastId] = useState<string>(""); // Track the last ID for pagination
@@ -54,40 +55,44 @@ function App() {
       },
 
       // onDiff for updates, including new rows from DB changes or parameter updates
+      // Inside the diffQuery.registerListener
       onDiff: (diff) => {
         console.log("onDiff received", diff);
-        setData((prev) => {
-          let updated = [...prev];
+        // setData((prev) => {
+        //   let updated = [...prev];
 
-          // Apply updates to existing rows
-          updated = updated.map((row) => {
-            const u = diff.updated.find((d) => d.current.id === row.id);
-            return u ? (u.current as CounterRecord) : row;
-          });
+        //   // Apply updates to existing rows
+        //   updated = updated.map((row) => {
+        //     const u = diff.updated.find((d) => d.current.id === row.id);
+        //     return u ? (u.current as CounterRecord) : row;
+        //   });
 
-          // Remove rows that were deleted
-          const removedIds = diff.removed.map((r) => r.id);
-          updated = updated.filter((row) => !removedIds.includes(row.id));
+        //   // Only remove rows that were explicitly deleted (e.g., from DB changes)
+        //   // Avoid removing rows just because they no longer match the query
+        //   const removedIds = diff.removed
+        //     // .filter((r) => r.source !== "query") // Optional: filter based on removal source, if PowerSync provides this
+        //     .map((r) => r.id);
+        //   updated = updated.filter((row) => !removedIds.includes(row.id));
 
-          // Add new rows (from DB changes or updated lastId)
-          const newRows = diff.added as CounterRecord[];
-          console.log("Adding", newRows.length, "new rows");
-          updated = [...updated, ...newRows];
+        //   // Add new rows (from DB changes or updated lastId)
+        //   const newRows = diff.added as CounterRecord[];
+        //   console.log("Adding", newRows.length, "new rows");
+        //   updated = [...updated, ...newRows];
 
-          // Deduplicate by ID
-          const seen = new Set<string>();
-          updated = updated.filter((row) => {
-            if (seen.has(row.id)) return false;
-            seen.add(row.id);
-            return true;
-          });
+        //   // Deduplicate by ID
+        //   const seen = new Set<string>();
+        //   updated = updated.filter((row) => {
+        //     if (seen.has(row.id)) return false;
+        //     seen.add(row.id);
+        //     return true;
+        //   });
 
-          // Sort by id to ensure order
-          updated.sort((a, b) => a.id.localeCompare(b.id));
+        //   // Sort by id to ensure order
+        //   updated.sort((a, b) => a.id.localeCompare(b.id));
 
-          console.log("Updated data length:", updated.length);
-          return updated;
-        });
+        //   console.log("Updated data length:", updated.length);
+        //   return updated;
+        // });
       },
     });
 
@@ -110,8 +115,8 @@ function App() {
     const diffQuery = diffQueryRef.current;
     if (diffQuery) {
       try {
-        // Create a fresh query object for updateSettings
-        const newQuery = powerSync.query<CounterRecord>({
+        // Create a fresh query object using GetAllQuery
+        const newQuery = new GetAllQuery<CounterRecord>({
           sql: `
             SELECT *
             FROM ${COUNTER_TABLE}
