@@ -1,132 +1,187 @@
 import "./App.css";
 import { COUNTER_TABLE, type CounterRecord } from "./powersync/AppSchema";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useQuery } from "@powersync/react";
+import { powerSync } from "./powersync/System";
 
 const LIMIT_INCREMENT = 6;
 
 function App() {
-  const [lastId, setLastId] = useState<string>("");
-  const [allData, setAllData] = useState<CounterRecord[]>([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [shouldLoadMore, setShouldLoadMore] = useState(true);
+  const [data, setData] = useState<CounterRecord[]>([]);
+  const [loadedUpToId, setLoadedUpToId] = useState<string>(""); // Track how far we've loaded
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const diffQueryRef = useRef<any>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  console.log("All data length:", allData.length, "Last ID:", lastId, "Should load more:", shouldLoadMore);
+  console.log("Data length:", data.length, "Loaded up to ID:", loadedUpToId);
 
-  // Query for the current batch of records (pagination)
-  // Always use the same parameter structure to avoid React hooks issues
-  const { data: currentBatch = [] } = useQuery<CounterRecord>(
-    shouldLoadMore ? `
-      SELECT *
-      FROM ${COUNTER_TABLE}
-      WHERE id > ?
-      ORDER BY id ASC
-      LIMIT ?
-    ` : `
-      SELECT *
-      FROM ${COUNTER_TABLE}
-      WHERE id > ?
-      ORDER BY id ASC
-      LIMIT 0
-    `, // Same structure but LIMIT 0 when not loading
-    [lastId, shouldLoadMore ? LIMIT_INCREMENT : 0] // Always 2 parameters
-  );
-
-  // Query to watch ALL records for real-time updates (not just loaded ones)
-  // This ensures we get updates for any record that might become visible
-  const { data: allRecords = [] } = useQuery<CounterRecord>(`
-    SELECT *
-    FROM ${COUNTER_TABLE}
-    ORDER BY id ASC
-  `, []);
-
-  // Process new batch when it arrives
+  // Create/update differential query that watches all currently loaded data
   useEffect(() => {
-    if (currentBatch.length > 0 && shouldLoadMore) {
-      console.log("Processing new batch of", currentBatch.length, "records");
-      
-      setAllData(prev => {
-        // Combine existing data with new batch
-        const combined = [...prev, ...currentBatch];
-        
-        // Deduplicate by ID
-        const seen = new Set<string>();
-        const deduplicated = combined.filter(record => {
-          if (seen.has(record.id)) return false;
-          seen.add(record.id);
-          return true;
+    if (data.length === 0) return; // Don't create watch until we have data
+    
+    console.log("Creating differential watch for all loaded data");
+    
+    // Clean up previous query if it exists
+    if (diffQueryRef.current) {
+      diffQueryRef.current.dispose?.();
+      diffQueryRef.current.close?.();
+    }
+
+    // Create query that watches ALL currently loaded data (no limit)
+    const maxLoadedId = data[data.length - 1].id;
+    
+    const baseQuery = powerSync.query<CounterRecord>({
+      sql: `
+        SELECT *
+        FROM ${COUNTER_TABLE}
+        WHERE id <= ?
+        ORDER BY id ASC
+      `,
+      parameters: [maxLoadedId],
+    });
+
+    const diffQuery = baseQuery.differentialWatch();
+
+    const dispose = diffQuery.registerListener({
+      onError: (err) => console.error("Differential watch error:", err),
+
+      onData: (rows) => {
+        console.log("Differential watch onData received", rows.length, "rows");
+        // Update our data with the current state from the database
+        const newRows = rows as CounterRecord[];
+        setData(newRows.sort((a, b) => a.id.localeCompare(b.id)));
+      },
+
+      onDiff: (diff) => {
+        console.log("Differential watch onDiff received", diff);
+        setData((prev) => {
+          let updated = [...prev];
+
+          // Apply updates to existing rows
+          updated = updated.map((row) => {
+            const u = diff.updated.find((d) => d.current.id === row.id);
+            return u ? (u.current as CounterRecord) : row;
+          });
+
+          // Remove deleted rows
+          const removedIds = diff.removed.map((r) => r.id);
+          updated = updated.filter((row) => !removedIds.includes(row.id));
+
+          // Add new rows that fall within our loaded range
+          const newRows = diff.added as CounterRecord[];
+          console.log("Adding", newRows.length, "new rows via diff");
+          updated = [...updated, ...newRows];
+
+          // Deduplicate and sort
+          const seen = new Set<string>();
+          updated = updated
+            .filter((row) => {
+              if (seen.has(row.id)) return false;
+              seen.add(row.id);
+              return true;
+            })
+            .sort((a, b) => a.id.localeCompare(b.id));
+
+          return updated;
         });
+      },
+    });
+
+    diffQueryRef.current = {
+      query: diffQuery,
+      dispose,
+      close: () => diffQuery.close()
+    };
+
+    return () => {
+      dispose();
+      diffQuery.close();
+    };
+  }, [data.length]); // Re-run when we have new data to watch
+
+  // Load more data using a separate differential watch for pagination
+  const loadMoreData = useCallback(() => {
+    if (isLoading) return;
+    
+    console.log("Loading more data from ID:", loadedUpToId);
+    setIsLoading(true);
+    
+    // Create a query for the next batch of data
+    const loadQuery = powerSync.query<CounterRecord>({
+      sql: `
+        SELECT *
+        FROM ${COUNTER_TABLE}
+        WHERE id > ?
+        ORDER BY id ASC
+        LIMIT ?
+      `,
+      parameters: [loadedUpToId, LIMIT_INCREMENT],
+    });
+
+    const loadDiffWatch = loadQuery.differentialWatch();
+    
+    const dispose = loadDiffWatch.registerListener({
+      onError: (err) => {
+        console.error("Load query error:", err);
+        setIsLoading(false);
+      },
+
+      onData: (rows) => {
+        console.log("Load query onData received", rows.length, "new rows");
+        const newRows = rows as CounterRecord[];
         
-        // Sort by ID to maintain order
-        return deduplicated.sort((a, b) => a.id.localeCompare(b.id));
-      });
+        if (newRows.length > 0) {
+          const newMaxId = newRows[newRows.length - 1].id;
+          console.log("New max ID:", newMaxId);
+          
+          setData((prev) => {
+            // Add new rows to existing data
+            const combined = [...prev, ...newRows];
+            
+            // Deduplicate and sort
+            const seen = new Set<string>();
+            return combined
+              .filter((row) => {
+                if (seen.has(row.id)) return false;
+                seen.add(row.id);
+                return true;
+              })
+              .sort((a, b) => a.id.localeCompare(b.id));
+          });
 
-      // Update lastId for next batch
-      const newLastId = currentBatch[currentBatch.length - 1].id;
-      setLastId(newLastId);
+          setLoadedUpToId(newMaxId);
+        }
+        
+        setIsLoading(false);
+        
+        // Clean up the load query after we get the data
+        dispose();
+        loadDiffWatch.close();
+      },
 
-      // Check if we've reached the end
-      if (currentBatch.length < LIMIT_INCREMENT) {
-        setHasMore(false);
-      }
+      // For pagination queries, we typically don't need onDiff since we just want the initial data
+      onDiff: () => {
+        // Could handle real-time updates to the pagination query if needed
+      },
+    });
 
-      // Stop loading more until requested again
-      setShouldLoadMore(false);
-    }
-  }, [currentBatch, shouldLoadMore]);
+  }, [loadedUpToId, isLoading]);
 
-  // Filter and update displayed data from all records (for real-time updates)
+  // Load initial data on mount
   useEffect(() => {
-    if (allRecords.length > 0 && allData.length > 0) {
-      console.log("All records updated, filtering to show loaded records");
-      
-      // Get the IDs of records we've already loaded
-      const loadedIds = new Set(allData.map(record => record.id));
-      
-      // Filter all records to only show the ones we've loaded (preserving real-time updates)
-      const filteredRecords = allRecords
-        .filter(record => loadedIds.has(record.id))
-        .sort((a, b) => a.id.localeCompare(b.id));
-      
-      // Only update if the data actually changed to avoid infinite loops
-      const currentIds = allData.map(r => r.id).join(',');
-      const newIds = filteredRecords.map(r => r.id).join(',');
-      const currentData = JSON.stringify(allData.map(r => ({ id: r.id, count: r.count })));
-      const newData = JSON.stringify(filteredRecords.map(r => ({ id: r.id, count: r.count })));
-      
-      if (currentIds === newIds && currentData !== newData) {
-        // Same records but different data (real-time update)
-        console.log("Real-time update detected");
-        setAllData(filteredRecords);
-      }
-    }
-  }, [allRecords]); // Remove allData from dependencies to avoid infinite loops
-
-  // Load initial batch on mount
-  useEffect(() => {
-    if (allData.length === 0 && !shouldLoadMore) {
-      console.log("Loading initial batch");
-      setShouldLoadMore(true);
-    }
-  }, [allData.length, shouldLoadMore]);
-
-  // Load more function
-  const loadMore = useCallback(() => {
-    if (hasMore && !shouldLoadMore) {
-      console.log("loadMore triggered");
-      setShouldLoadMore(true);
-    }
-  }, [hasMore, shouldLoadMore]);
+    console.log("Loading initial data");
+    loadMoreData();
+  }, []); // Run once on mount
 
   // Intersection Observer for infinite scroll
   useEffect(() => {
+    if (isLoading) return; // Don't set up observer while loading
+    
     console.log("Setting up IntersectionObserver");
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
+        if (entries[0].isIntersecting && !isLoading) {
           console.log("Sentinel intersected, triggering loadMore");
-          loadMore();
+          loadMoreData();
         }
       },
       { threshold: 0.1, rootMargin: "20px" }
@@ -141,18 +196,18 @@ function App() {
         observer.unobserve(sentinelRef.current);
       }
     };
-  }, [loadMore]);
+  }, [loadMoreData, isLoading]);
 
   return (
     <div className="app-container">
-      {allData.length === 0 ? (
+      {data.length === 0 && isLoading ? (
         <div>Loading counters...</div>
       ) : (
         <div
           className="counter-grid"
           style={{ maxHeight: "400px", overflowY: "auto", position: "relative" }}
         >
-          {allData.map((counter) => (
+          {data.map((counter) => (
             <div key={counter.id} className="counter-card">
               <p>Counter ID: {counter.id}</p>
               <p className="counter-count">Count: {counter.count ?? 0}</p>
@@ -164,12 +219,12 @@ function App() {
               </p>
             </div>
           ))}
-          {hasMore && (
-            <div
-              ref={sentinelRef}
-              style={{ height: "1px", width: "100%", background: "transparent" }}
-            />
-          )}
+          {isLoading && <div>Loading more...</div>}
+          {/* Sentinel element for infinite scroll trigger */}
+          <div
+            ref={sentinelRef}
+            style={{ height: "1px", width: "100%", background: "transparent" }}
+          />
         </div>
       )}
     </div>
