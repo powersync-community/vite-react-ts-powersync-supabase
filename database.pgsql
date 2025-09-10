@@ -19,3 +19,20 @@ GRANT SELECT ON ALL TABLES IN SCHEMA public TO powersync_role;
 -- Specify a subset of tables to replicate if required.
 -- NOTE: this must be named "powersync" at the moment
 CREATE PUBLICATION powersync FOR ALL TABLES;
+
+-- Seed counters table with 100 rows
+DO $$
+DECLARE
+  i INT;
+  start_date TIMESTAMP := '2025-09-06 08:00:00'; -- day after your latest row
+BEGIN
+  FOR i IN 1..100 LOOP
+    INSERT INTO counters (id, count, owner_id, created_at)
+    VALUES (
+      gen_random_uuid(),
+      floor(random() * 200)::INT,        -- random count between 0–199
+       gen_random_uuid(),                       -- replace with your desired owner_id
+      start_date + (i - 1) * interval '1 day'
+    );
+  END LOOP;
+END $$;
