@@ -9,9 +9,9 @@ function App() {
     infiniteData: data,
     isLoading,
     sentinelRef,
-  } = useInfiniteScroll<CounterRecord, "created_at">({
+  } = useInfiniteScroll<CounterRecord, "id">({
     table: COUNTER_TABLE,
-    cursor: "created_at",
+    cursor: "id",
     limit: LIMIT_INCREMENT,
     onData: () => {},
     onDiff: (diff) => {
