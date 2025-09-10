@@ -42,14 +42,13 @@ export const useInfiniteScroll = <
       });
     } else {
       // We have data - watch everything up to our max loaded ID
-      //   const maxId = infiniteData[infiniteData.length - 1][cursor];
       console.log("Watching data up to cursor value:", lastCursorValue);
       query = powerSync.query<T>({
         sql: `
           SELECT *
           FROM ${table}
           WHERE ${cursor} <= ?
-          ORDER BY id ASC
+          ORDER BY ${cursor} ASC
         `,
         parameters: [String(lastCursorValue)],
       });
@@ -61,16 +60,12 @@ export const useInfiniteScroll = <
       onError: (err) => console.error("Differential watch error:", err),
       onData: (rows) => {
         console.log("onData received", rows.length, "rows");
-        // const newRows = rows as T[];
         const sortedRows = (rows as T[]).sort((a, b) =>
           (a[cursor] as string).localeCompare(b[cursor] as string)
         );
-        // setData(sortedRows);
         onData(sortedRows);
 
         if (sortedRows.length > 0 && lastCursorValue === "") {
-          // This is initial load, set the loadedUpToId
-          //   setLoadedUpToId(sortedRows[sortedRows.length - 1].id);
           setLastCursorValue(sortedRows[sortedRows.length - 1][cursor]);
         }
 
