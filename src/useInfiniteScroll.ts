@@ -41,7 +41,7 @@ export const useInfiniteScroll = <
         parameters: [limit],
       });
     } else {
-      // We have data - watch everything up to our max loaded ID
+      // We have data - watch everything up to our max loaded cursor
       console.log("Watching data up to cursor value:", lastCursorValue);
       query = powerSync.query<T>({
         sql: `
@@ -123,7 +123,7 @@ export const useInfiniteScroll = <
   const loadMoreData = useCallback(async () => {
     if (isLoading || infiniteData.length === 0) return;
 
-    console.log("Loading more data from ID:", lastCursorValue);
+    console.log("Loading more data from cursor:", lastCursorValue);
     setIsLoading(true);
     const results = await powerSync.getAll<T>(
       `SELECT * 
