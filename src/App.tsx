@@ -5,18 +5,19 @@ import { useInfiniteScroll } from "./useInfiniteScroll";
 
 const LIMIT_INCREMENT = 6;
 
-function App() {
+const cursor: "id" | "created_at" = "id"; // or "created_at"
 
+function App() {
   const [data, setData] = useState<CounterRecord[]>([]);
 
   const {
     isLoading,
     sentinelRef,
-  } = useInfiniteScroll<CounterRecord, "id">({
+  } = useInfiniteScroll<CounterRecord, typeof cursor>({
     infiniteData: data,
     setInfiniteData: setData,
     table: COUNTER_TABLE,
-    cursor: "id",
+    cursor: cursor,
     limit: LIMIT_INCREMENT,
     onDiff: (diff) => {
       // Apply logic to update loaded data based on the onDiff callback
@@ -46,7 +47,7 @@ function App() {
             return true;
           })
           .sort((a, b) =>
-            (a.id).localeCompare(b.id)
+            (a[cursor] as string).localeCompare(b[cursor] as string)
           );
 
         return result;
