@@ -1,21 +1,56 @@
+import { useState } from "react";
 import "./App.css";
 import { COUNTER_TABLE, type CounterRecord } from "./powersync/AppSchema";
 import { useInfiniteScroll } from "./useInfiniteScroll";
 
-const LIMIT_INCREMENT = 15;
+const LIMIT_INCREMENT = 6;
 
 function App() {
+
+  const [data, setData] = useState<CounterRecord[]>([]);
+
   const {
-    infiniteData: data,
     isLoading,
     sentinelRef,
   } = useInfiniteScroll<CounterRecord, "id">({
+    infiniteData: data,
+    setInfiniteData: setData,
     table: COUNTER_TABLE,
     cursor: "id",
     limit: LIMIT_INCREMENT,
-    onData: () => {},
     onDiff: (diff) => {
-      console.log("App received diff", diff);
+      // Apply logic to update loaded data based on the onDiff callback
+      setData((prev) => {
+        // Replace existing rows with updated versions
+        let updated = prev.map((row) => {
+          const u = diff.updated.find((d) => d.current.id === row.id);
+          return u ? (u.current as CounterRecord) : row;
+        });
+
+        // Remove deleted rows
+        const removedIds = diff.removed.map((r) => r.id);
+        updated = updated.filter((row) => !removedIds.includes(row.id));
+
+        // Add new rows
+        const newRows = diff.added;
+        if (newRows.length > 0) {
+          updated = [...updated, ...newRows];
+        }
+
+        // Deduplicate and sort
+        const seen = new Set<string>();
+        const result = updated
+          .filter((row) => {
+            if (seen.has(row.id)) return false;
+            seen.add(row.id);
+            return true;
+          })
+          .sort((a, b) =>
+            (a.id).localeCompare(b.id)
+          );
+
+        return result;
+      });
     },
   });
 
