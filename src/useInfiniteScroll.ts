@@ -6,19 +6,20 @@ export const useInfiniteScroll = <
   T extends { id: string },
   K extends keyof T & string
 >({
+  infiniteData,
+  setInfiniteData,
   onDiff,
-  onData,
   table,
   cursor,
   limit = 6,
 }: {
+  infiniteData: T[],
+  setInfiniteData: React.Dispatch<React.SetStateAction<T[]>>,
   onDiff: (diff: WatchedQueryDifferential<T>) => void;
-  onData: (data: T[]) => void;
   table: string;
   cursor: K;
   limit?: number;
 }) => {
-  const [infiniteData, setInfiniteData] = useState<T[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [lastCursorValue, setLastCursorValue] = useState<T[K]>("" as T[K]);
@@ -63,7 +64,6 @@ export const useInfiniteScroll = <
         const sortedRows = (rows as T[]).sort((a, b) =>
           (a[cursor] as string).localeCompare(b[cursor] as string)
         );
-        onData(sortedRows);
 
         if (sortedRows.length > 0 && lastCursorValue === "") {
           setLastCursorValue(sortedRows[sortedRows.length - 1][cursor]);
@@ -71,43 +71,9 @@ export const useInfiniteScroll = <
 
         setIsLoading(false);
       },
-
       onDiff: (diff) => {
-        console.log("onDiff received", diff);
         onDiff(diff);
-        setInfiniteData((prev) => {
-          // Replace existing rows with updated versions
-          let updated = prev.map((row) => {
-            const u = diff.updated.find((d) => d.current.id === row.id);
-            return u ? (u.current as T) : row;
-          });
-
-          // Remove deleted rows
-          const removedIds = diff.removed.map((r) => r.id);
-          updated = updated.filter((row) => !removedIds.includes(row.id));
-
-          // Add new rows
-          const newRows = diff.added;
-          if (newRows.length > 0) {
-            console.log("Adding", newRows.length, "new rows via diff");
-            updated = [...updated, ...newRows];
-          }
-
-          // Deduplicate and sort
-          const seen = new Set<string>();
-          const result = updated
-            .filter((row) => {
-              if (seen.has(row[cursor] as string)) return false;
-              seen.add(row[cursor] as string);
-              return true;
-            })
-            .sort((a, b) =>
-              (a[cursor] as string).localeCompare(b[cursor] as string)
-            );
-
-          return result;
-        });
-      },
+      }
     });
 
     if (infiniteData.length === 0) {
@@ -123,7 +89,6 @@ export const useInfiniteScroll = <
   const loadMoreData = useCallback(async () => {
     if (isLoading || infiniteData.length === 0) return;
 
-    console.log("Loading more data from cursor:", lastCursorValue);
     setIsLoading(true);
     const results = await powerSync.getAll<T>(
       `SELECT * 
