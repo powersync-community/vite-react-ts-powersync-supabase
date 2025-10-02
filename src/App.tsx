@@ -4,6 +4,7 @@ import { COUNTER_TABLE, type CounterRecord } from "./powersync/AppSchema";
 import { useEffect, useState } from "react";
 import { powerSync } from "./powersync/System";
 import { connector } from "./powersync/SupabaseConnector";
+import { useCounters } from "./useCounters";
 
 function App() {
   const [userID, setUserID] = useState<string | null>(null);
@@ -12,16 +13,18 @@ function App() {
   // Example of a watch query using useQuery hook
   // This demonstrates how to fetch and automatically update data when the underlying table changes
   // using an incremental watch query - see here https://docs.powersync.com/usage/use-case-examples/watch-queries#incremental-watch-queries
-  const { data: counters, isLoading } = useQuery<CounterRecord>(
-    `SELECT * FROM ${COUNTER_TABLE} ORDER BY created_at ASC`,
-    [],
-    {
-      rowComparator: {
-        keyBy: (item) => item.id,
-        compareBy: (item) => JSON.stringify(item)
-      }
-    }
-  );
+  // const { data: counters, isLoading } = useQuery<CounterRecord>(
+  //   `SELECT * FROM ${COUNTER_TABLE} ORDER BY created_at ASC`,
+  //   [],
+  //   {
+  //     rowComparator: {
+  //       keyBy: (item) => item.id,
+  //       compareBy: (item) => JSON.stringify(item)
+  //     }
+  //   }
+  // );
+
+  const { data: counters, isLoading } = useCounters();
 
   // Get the current authenticated user's ID from Supabase on component mount
   useEffect(() => {

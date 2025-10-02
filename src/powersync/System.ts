@@ -18,7 +18,7 @@ logger.setLevel(LogLevel.DEBUG);
 export const powerSync = new PowerSyncDatabase({
   schema: AppSchema,
   database: {
-    dbFilename: 'example.db'
+    dbFilename: 'exampl2542e.db'
   },
   logger: logger
 });
@@ -75,19 +75,12 @@ console.log('userID', userID);
 // Establish connection between PowerSync and the Supabase connector
 powerSync.connect(connector);
 
-const count = await powerSync.execute(
-  `SELECT * FROM ${COUNTER_TABLE} WHERE owner_id = ?`,
-  [userID]
-);
+// if (count.rows?.length === 0) {
 
-console.log('count', count);
-
-if (count.rows?.length === 0) {
-
-  for (let i = 0; i < 100; i++) {
-    await powerSync.execute(
-      `INSERT INTO ${COUNTER_TABLE} (id, owner_id, count, created_at) VALUES (uuid(), ?, ?, ?)`,
-      [userID, i, new Date().toISOString()]
-    );
-  }
-}
+//   for (let i = 0; i < 100; i++) {
+//     await powerSync.execute(
+//       `INSERT INTO ${COUNTER_TABLE} (id, owner_id, count, created_at) VALUES (uuid(), ?, ?, ?)`,
+//       [userID, i, new Date().toISOString()]
+//     );
+//   }
+// }
