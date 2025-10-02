@@ -3,7 +3,7 @@ import {
   LogLevel,
   PowerSyncDatabase,
 } from "@powersync/web";
-import { AppSchema } from "./AppSchema";
+import { AppSchema, COUNTER_TABLE } from "./AppSchema";
 import { connector } from "./SupabaseConnector";
 
 const logger = createBaseLogger();
@@ -68,5 +68,26 @@ export const powerSync = new PowerSyncDatabase({
 // Sign in the user anonymously to Supabase (creates a temporary user session)
 await connector.signInAnonymously();
 
+const userID = await connector.client.auth.getUser().then((user) => user.data.user?.id);
+
+console.log('userID', userID);
+
 // Establish connection between PowerSync and the Supabase connector
 powerSync.connect(connector);
+
+const count = await powerSync.execute(
+  `SELECT * FROM ${COUNTER_TABLE} WHERE owner_id = ?`,
+  [userID]
+);
+
+console.log('count', count);
+
+if (count.rows?.length === 0) {
+
+  for (let i = 0; i < 100; i++) {
+    await powerSync.execute(
+      `INSERT INTO ${COUNTER_TABLE} (id, owner_id, count, created_at) VALUES (uuid(), ?, ?, ?)`,
+      [userID, i, new Date().toISOString()]
+    );
+  }
+}

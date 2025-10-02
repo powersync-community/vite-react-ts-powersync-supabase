@@ -74,6 +74,12 @@ function App() {
       {/* Top row with Status, Logo, and Helpful Links in a grid like counter-grid */}
       <div className="top-grid">
         <div className="status-card">
+          <h3>Counters</h3>
+          <div className="mono-text">
+            {counters?.length}
+          </div>
+        </div>
+        <div className="status-card">
           <h3>PowerSync Status</h3>
           <div className="mono-text">
             {/* SDK version of the rust core extension and it's hash - see here https://github.com/powersync-ja/powersync-sqlite-core/releases */}
@@ -160,7 +166,7 @@ function App() {
 
               <div className="counter-grid">
                 {counters.map((counter) => (
-                  <div key={counter.owner_id} className="counter-card">
+                  <div key={counter.id} className="counter-card">
                     <p>Counter for Id: {counter.owner_id}</p>
                     <p className="counter-count">Count: {counter.count}</p>
                     <p className="counter-date">
