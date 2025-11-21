@@ -2,6 +2,8 @@
 # https://hub.docker.com/_/node
 FROM node:lts-alpine AS build
 
+ARG RAILWAY_ENVIRONMENT
+
 # Set config
 ENV NPM_CONFIG_UPDATE_NOTIFIER=false
 ENV NPM_CONFIG_FUND=false
