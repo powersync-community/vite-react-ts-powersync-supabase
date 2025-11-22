@@ -4,7 +4,7 @@
 
 A templated Vite, TS, React, PowerSync and Supabase project to get you started quickly with building offline-first applications with PowerSync and Supabase.
 
-🚀 [Live Demo](https://vite-react-ts-powersync-supabase-testing.up.railway.app/) 🚀
+🚀 [Live Demo](https://vite-react-ts-powersync-supabase.up.railway.app/) 🚀
 
 # Usage
 
