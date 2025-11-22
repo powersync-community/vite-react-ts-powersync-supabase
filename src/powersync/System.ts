@@ -72,4 +72,8 @@ export const powerSync = new PowerSyncDatabase({
 await connector.signInAnonymously();
 
 // Establish connection between PowerSync and the Supabase connector
-powerSync.connect(connector, { clientImplementation: SyncClientImplementation.RUST });
+powerSync.connect(connector, { 
+  // Rust based implementation is more efficient and faster than the JavaScript implementation
+  clientImplementation: SyncClientImplementation.RUST, 
+  crudUploadThrottleMs: 5000 
+});
