@@ -6,18 +6,21 @@ replication:
       sslmode: disable
 
 storage:
-  type: postgresql
-  uri: !env PS_POSTGRESQL_URI
-  sslmode: disable
+  type: mongodb
+  uri: mongodb://mongo:27017/powersync_demo
 
 port: 8080
 
 sync_rules:
   content: |
-    bucket_definitions:
-      global:
-        data:
-          - SELECT * FROM counters
+    config:
+      edition: 2
+    streams:
+      counters:
+        query: SELECT * FROM counters WHERE stream IN (subscription.parameters() -> 'counter_streams')
+        auto_subscribe: false
+        priority: 2
+        accept_potentially_dangerous_queries: true
 
 client_auth:
   supabase: true

@@ -71,9 +71,16 @@ export const powerSync = new PowerSyncDatabase({
 // Sign in the user anonymously to Supabase (creates a temporary user session)
 await connector.signInAnonymously();
 
-// Establish connection between PowerSync and the Supabase connector
+// // Establish connection between PowerSync and the Supabase connector
 powerSync.connect(connector, { 
   // Rust based implementation is more efficient and faster than the JavaScript implementation
-  clientImplementation: SyncClientImplementation.RUST, 
-  crudUploadThrottleMs: 5000 
+  clientImplementation: SyncClientImplementation.RUST
 });
+
+const sub = await powerSync.syncStream('counters', {
+  counter_streams: ['test', 'test2', 'test3']
+}).subscribe();
+
+await sub.waitForFirstSync();
+
+console.log("Done subscribing to counters");

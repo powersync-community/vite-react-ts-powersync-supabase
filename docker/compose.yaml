@@ -8,10 +8,39 @@ services:
     networks:
       - supabase_network_powersync
     env_file: ../.env.local
+    depends_on:
+      mongo-rs-init:
+        condition: service_completed_successfully
     ports:
       - 8080:8080
       - 9090:9090
 
+  mongo:
+    image: mongo:7.0
+    command: --replSet rs0 --bind_ip_all --quiet
+    restart: unless-stopped
+    ports:
+      - 27017:27017
+    networks:
+    - supabase_network_powersync
+    volumes:
+      - mongo_storage:/data/db
+  
+  mongo-rs-init:
+    image: mongo:7.0
+    depends_on:
+      - mongo
+    restart: on-failure
+    networks:
+      - supabase_network_powersync
+    entrypoint:
+      - bash
+      - -c
+      - 'mongosh --host mongo:27017 --eval ''try{rs.status().ok && quit(0)} catch {} rs.initiate({_id: "rs0", version: 1, members: [{ _id: 0, host : "mongo:27017" }]})'''
+
 networks:
   supabase_network_powersync:
     external: true
+
+volumes:
+  mongo_storage:
