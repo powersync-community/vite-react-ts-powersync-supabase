@@ -12,11 +12,14 @@ storage:
 
 port: 8080
 
-sync_rules:
+sync_config:
   content: |
-    bucket_definitions:
+    config:
+      edition: 3
+    streams:
       global:
-        data:
+        auto_subscribe: true
+        queries:
           - SELECT * FROM counters
 
 client_auth:
