@@ -14,6 +14,7 @@ port: 8080
 
 sync_config:
   content: |
+    edition: 3
     streams:
       global:
         auto_subscribe: true
