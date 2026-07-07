@@ -13,19 +13,6 @@ logger.useDefaults();
 logger.setLevel(LogLevel.DEBUG);
 
 /**
- * Detects OPFS availibility
- *
- * OPFS requires navig
- */
-export function isOPFSAvailable(): boolean {
-  return (
-    typeof navigator !== "undefined" &&
-    typeof navigator.storage?.getDirectory === "function" &&
-    typeof Worker === "function"
-  );
-}
-
-/**
  * Detects mobile devices (phones and tablets).
  *
  * Prefers the modern `navigator.userAgentData.mobile` hint (Chromium) and
@@ -42,7 +29,7 @@ export function isMobile(): boolean {
   if (typeof uaData?.mobile === "boolean") return uaData.mobile;
 
   const ua = navigator.userAgent;
-  // iPadOS 13+ masquerades as macOS; a Mac reporting touch points is really an iPad.
+  // iPadOS 13+ looks like macOS; a Mac reporting touch points is really an iPad.
   const isIPadOS =
     navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
 
@@ -73,69 +60,33 @@ export function isSafari(): boolean {
 }
 
 /**
- * Probes whether OPFS can actually be used, not just whether the API exists.
+ * Detects OPFS availibility
  *
- * Safari (including Safari Private Browsing) exposes the OPFS API surface even
- * when it is non-functional, so the synchronous `isOPFSAvailable` check isn't
- * enough. We confirm real usability by opening a SyncAccessHandle inside a
- * throwaway Worker, which is exactly what OPFSCoopSyncVFS relies on and which
- * fails in Safari Private Browsing. Non-Safari browsers that expose the API
- * support it, so we skip the (more expensive) probe there.
+ * Checking if the OPFS related functions are availible
  */
-export async function isOPFSUsable(): Promise<boolean> {
-  if (!isOPFSAvailable()) return false;
-  if (!isSafari()) return true;
-
-  const workerSource = `
-    self.onmessage = async () => {
-      try {
-        const root = await navigator.storage.getDirectory();
-        const file = await root.getFileHandle("__powersync_opfs_probe__", { create: true });
-        const handle = await file.createSyncAccessHandle();
-        handle.close();
-        await root.removeEntry("__powersync_opfs_probe__");
-        self.postMessage(true);
-      } catch {
-        self.postMessage(false);
-      }
-    };
-  `;
-
-  let url: string | undefined;
-  try {
-    url = URL.createObjectURL(
-      new Blob([workerSource], { type: "text/javascript" }),
-    );
-    const worker = new Worker(url);
-    const usable = await new Promise<boolean>((resolve) => {
-      const timeout = setTimeout(() => resolve(false), 2000);
-      worker.onmessage = (event) => {
-        clearTimeout(timeout);
-        resolve(event.data === true);
-      };
-      worker.onerror = () => {
-        clearTimeout(timeout);
-        resolve(false);
-      };
-      worker.postMessage(null);
-    });
-    worker.terminate();
-    return usable;
-  } catch {
-    // If we can't even spawn the probe, assume OPFS is unusable and fall back.
-    return false;
-  } finally {
-    if (url) URL.revokeObjectURL(url);
-  }
+export function isOPFSAvailable(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    typeof navigator.storage?.getDirectory === "function" &&
+    typeof Worker === "function"
+  );
 }
 
 /**
- * Recognises Safari Private Browsing: desktop Safari where OPFS is present but
- * not usable. Multi-tab is disabled there because a private tab cannot reliably
- * run a SharedWorker + OPFS, and private tabs are isolated from each other anyway.
+ * Checks whether OPFS actually works, not just whether the API exists.
+ *
+ * Safari Private Browsing exposes the OPFS API but rejects when you request the
+ * directory, so calling getDirectory() distinguishes a usable OPFS from an
+ * unusable one. Browsers that expose the API otherwise support it.
  */
-export function isSafariPrivate(opfsUsable: boolean): boolean {
-  return isSafari() && !isMobile() && !opfsUsable;
+export async function isOPFSUsable(): Promise<boolean> {
+  if (!isOPFSAvailable()) return false;
+  try {
+    await navigator.storage.getDirectory();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function pickVFS(opfsUsable: boolean = isOPFSAvailable()): WASQLiteVFS {
@@ -147,7 +98,7 @@ export function pickVFS(opfsUsable: boolean = isOPFSAvailable()): WASQLiteVFS {
   //  - OPFS is not usable at all: no API, or Safari Private Browsing where the
   //    API exists but createSyncAccessHandle fails (see isOPFSUsable), or
   //  - mobile Safari (iOS/iPadOS), where OPFS is not supported, or
-  //  - desktop Safari with multi-tab, which cannot coordinate OPFS across tabs.
+  //  - desktop Safari with multi-tab, due to aggressive tab suspension from Safari
   const forceIndexedDB = !opfsUsable || (safari && (mobile || multiTab));
 
   const vfs = forceIndexedDB
@@ -194,8 +145,7 @@ export function pickVFS(opfsUsable: boolean = isOPFSAvailable()): WASQLiteVFS {
 // Resolve the storage strategy once before opening the database. The OPFS
 // usability probe is async (it spins up a Worker), hence the top-level await.
 const opfsUsable = await isOPFSUsable();
-const enableMultiTabs =
-  typeof SharedWorker !== "undefined" && !isSafariPrivate(opfsUsable);
+const enableMultiTabs = typeof SharedWorker !== "undefined";
 
 export const powerSync = new PowerSyncDatabase({
   database: new WASQLiteOpenFactory({
