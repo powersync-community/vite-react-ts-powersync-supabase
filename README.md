@@ -89,6 +89,7 @@ If you prefer using the Supabase CLI to develop the database locally and push it
 
 3. Click on the "Credentials" tab of the "Edit Instance" dialog:
    - Tick the "Use Supabase Auth" checkbox and configure the JWT secret.
+   - Note: newer Supabase projects sign user tokens with asymmetric JWT signing keys (ES256) instead of the legacy shared JWT secret. If that is your case, point PowerSync at your project's JWKS endpoint (`https://<your-project-id>.supabase.co/auth/v1/.well-known/jwks.json`) rather than pasting a shared secret. See the [PowerSync Supabase auth guide](https://docs.powersync.com/integration-guides/supabase-+-powersync) for details. The local Docker setup in this repo is already wired up for this (see `docker/powersync.yaml`).
    - Click "Save" to save all the changes to your PowerSync instance. The instance will now be deployed — this may take a minute or two.
 
 <details>
@@ -149,7 +150,7 @@ Then set the following environment variables in your `.env.local` file:
 
 ```bash
 VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
+VITE_SUPABASE_PUBLISHABLE_KEY=
 VITE_POWERSYNC_URL=
 ```
 
@@ -157,7 +158,7 @@ VITE_POWERSYNC_URL=
 
 For Supabase, you can get both settings directly from:
 - VITE_SUPABASE_URL - [API Settings & URL](https://supabase.com/dashboard/project/_/settings/api)
-- VITE_SUPABASE_ANON_KEY - [API Keys](https://supabase.com/dashboard/project/_/settings/api-keys)
+- VITE_SUPABASE_PUBLISHABLE_KEY - copy the **publishable** key (`sb_publishable_...`) from [API Keys](https://supabase.com/dashboard/project/_/settings/api-keys)
 
 For PowerSync, follow these steps:
 1. Go to your [PowerSync Dashboard](https://powersync.journeyapps.com/)

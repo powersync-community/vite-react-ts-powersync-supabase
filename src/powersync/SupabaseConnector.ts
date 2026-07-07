@@ -15,7 +15,7 @@ import {
 
 export type SupabaseConfig = {
   supabaseUrl: string;
-  supabaseAnonKey: string;
+  supabaseKey: string;
   powersyncUrl: string;
 };
 
@@ -49,12 +49,12 @@ export class SupabaseConnector
     this.config = {
       supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
       powersyncUrl: import.meta.env.VITE_POWERSYNC_URL,
-      supabaseAnonKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      supabaseKey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
     };
 
     this.client = createClient(
       this.config.supabaseUrl,
-      this.config.supabaseAnonKey,
+      this.config.supabaseKey,
       {
         auth: {
           persistSession: true,
