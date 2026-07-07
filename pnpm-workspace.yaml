@@ -1,0 +1,4 @@
+allowBuilds:
+  '@journeyapps/wa-sqlite': true
+  esbuild: true
+  supabase: true
