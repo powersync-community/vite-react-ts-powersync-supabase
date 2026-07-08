@@ -24,7 +24,14 @@ sync_config:
 
 client_auth:
   supabase: true
+  # HS256 shared-secret validation (legacy Supabase JWT signing).
   supabase_jwt_secret: !env PS_SUPABASE_JWT_SECRET
+  # Asymmetric (ES256) validation for Supabase's new JWT signing keys.
+  # Points at the Supabase Auth JWKS endpoint; PowerSync selects the key by KID.
+  jwks_uri: !env PS_SUPABASE_JWKS_URI
+  # Supabase issues user tokens with the "authenticated" audience.
+  audience:
+    - authenticated
 
 telemetry:
   prometheus_port: 9090
