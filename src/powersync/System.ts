@@ -129,15 +129,6 @@ export const powerSync = new PowerSyncDatabase({
   logger: logger,
 });
 
-/**
- * Quick Decision Guide:
- *
- * 🎯 Most apps → Use OPFSCoopSyncVFS (uncomment above)
- * 📱 Safari users → Must use OPFSCoopSyncVFS
- * ⚡ Single tab only → Use AccessHandlePoolVFS
- * 🔧 Quick prototype → Keep default (IndexedDB)
- */
-
 // Sign in the user anonymously to Supabase (creates a temporary user session)
 await connector.signInAnonymously();
 
