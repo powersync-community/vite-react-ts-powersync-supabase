@@ -60,6 +60,17 @@ export function isSafari(): boolean {
 }
 
 /**
+ * Decides whether multi-tab support should be enabled.
+ *
+ * Multi-tab requires SharedWorker, and is additionally disabled on Safari
+ * (mobile and desktop) because Safari aggressively suspends background tabs,
+ * which breaks the shared worker coordination between tabs.
+ */
+export function isMultiTabEnabled(): boolean {
+  return typeof SharedWorker !== "undefined" && !isSafari();
+}
+
+/**
  * Detects OPFS availibility
  *
  * Checking if the OPFS related functions are availible
@@ -92,14 +103,15 @@ export async function isOPFSUsable(): Promise<boolean> {
 export function pickVFS(opfsUsable: boolean = isOPFSAvailable()): WASQLiteVFS {
   const safari = isSafari();
   const mobile = isMobile();
-  const multiTab = typeof SharedWorker !== "undefined";
+  const multiTab = isMultiTabEnabled();
 
   // Fall back to IndexedDB (IDBBatchAtomicVFS) when OPFS can't be used:
   //  - OPFS is not usable at all: no API, or Safari Private Browsing where the
   //    API exists but createSyncAccessHandle fails (see isOPFSUsable), or
-  //  - mobile Safari (iOS/iPadOS), where OPFS is not supported, or
-  //  - desktop Safari with multi-tab, due to aggressive tab suspension from Safari
-  const forceIndexedDB = !opfsUsable || (safari && (mobile || multiTab));
+  //  - any Safari: mobile (iOS/iPadOS) lacks OPFS support, and desktop
+  //    Safari's aggressive tab suspension can strand OPFS locks even with
+  //    multi-tab disabled
+  const forceIndexedDB = !opfsUsable || safari;
 
   const vfs = forceIndexedDB
     ? WASQLiteVFS.IDBBatchAtomicVFS
@@ -112,7 +124,7 @@ export function pickVFS(opfsUsable: boolean = isOPFSAvailable()): WASQLiteVFS {
 }
 
 const opfsUsable = await isOPFSUsable();
-const enableMultiTabs = typeof SharedWorker !== "undefined";
+const enableMultiTabs = isMultiTabEnabled();
 
 export const powerSync = new PowerSyncDatabase({
   database: new WASQLiteOpenFactory({
