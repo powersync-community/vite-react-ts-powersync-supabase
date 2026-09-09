@@ -68,7 +68,6 @@ No persistent memory in your harness? Ask the operator at session start and keep
 
 Boot and auth-transition code paths (reads opened before auth resolves, provisional connect ordering) are timing-dependent, and local auth usually resolves too fast to exercise them. Throttle the auth provider's network requests (for example, Playwright route interception with a delay of about 2.5s) to reproduce production ordering deterministically. Temporary console marks around readiness flips and transition phases, captured with Playwright, give millisecond timelines that turn "feels slow" into attributable stages.
 
-
 ## Always Use the PowerSync CLI
 
 **The [PowerSync CLI](https://docs.powersync.com/tools/cli.md) is the default tool for all PowerSync operations.** Do not manually create config files, do not direct operators to the dashboard, and do not write `service.yaml` or `sync-config.yaml` from scratch. Fall back to manual config or dashboard instructions only when the operator explicitly says they can't use the CLI.
@@ -123,7 +122,6 @@ These apply to all paths. Domain-specific pitfalls are in their reference files 
 
 Additional footguns by area (do not load unless working there):
 - **Config/CLI:** `references/powersync-cli.md`, `references/powersync-service.md`, `references/sync-config.md`
-- **Terraform/IaC:** `references/terraform.md` (credential handling, `sync_config_content` wrapper, do not mix CLI deploys with Terraform-managed instances)
 - **JS/TS SDK:** `references/sdks/powersync-js.md` (type-only imports, `connect()` semantics, `transaction.complete()`)
 - **React:** `references/sdks/powersync-js-react.md` (Strict Mode, Suspense, Next.js)
 - **Supabase:** `references/supabase-auth.md` (JWT signing keys, publication SQL, local Supabase)
@@ -208,10 +206,6 @@ Load `references/powersync-cli.md`, `references/powersync-service.md`, and `refe
 
 Only when the CLI cannot be used. Load `references/powersync-service.md` and `references/sync-config.md`. Backend not Supabase? Also load `references/custom-backend.md`.
 
-### Path 5: Cloud + Terraform (IaC)
-
-If the operator is managing PowerSync Cloud alongside other infrastructure in Terraform, load `references/terraform.md`. The Terraform provider provisions projects and instances and deploys sync config — do not also run `powersync deploy` against the same instance. Auth uses `PS_PAT_TOKEN` (not `PS_ADMIN_TOKEN`). `sync_config_content` on the `powersync_instance` resource follows the same Sync Streams format as `sync-config.yaml` — load `references/sync-config.md` for the full reference.
-
 ## Architecture, Routing, SDK Tables & Key Rules
 
 Defined once in **SKILL.md** — refer there for:
@@ -220,3 +214,13 @@ Defined once in **SKILL.md** — refer there for:
 - **"What to Load for Your Task"** table — tasks → starter and on-demand files
 - **SDK Reference Files** tables — frameworks/platforms → reference files
 - **"Key Rules to Apply Without Being Asked"** — `id` column, `connect()`, `transaction.complete()`, `disconnectAndClear()`, 4xx upload handling
+
+## Trimmed copy
+
+This installed copy was trimmed on 2026-09-09 with the operator's approval to
+match the platforms detected in this repo: js. Unused
+reference documents were removed from this local copy only: powersync-dart.md, powersync-kotlin.md, powersync-swift.md, powersync-dotnet.md, terraform.md.
+Reinstalling the skill or running `npx skills update` restores the full copy.
+Full skill: https://github.com/powersync-ja/agent-skills
+
+Retained warning from the removed Terraform reference: do not run `powersync deploy` against an instance managed by Terraform.
