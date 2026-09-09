@@ -1,0 +1,17 @@
+# PowerSync sync configuration (Sync Streams, edition 3).
+# This is the cloud counterpart of the sync_config block in docker/powersync.yaml.
+# To read more about Sync Streams, see https://docs.powersync.com/sync/streams/overview
+config:
+  edition: 3
+
+streams:
+  # The data in the global stream is synced to all users
+  global:
+    auto_subscribe: true
+    queries:
+      - SELECT * FROM counters
+
+  # The stream below would only sync counters created by the current user
+  # my_counters:
+  #   auto_subscribe: true
+  #   query: SELECT * FROM counters WHERE owner_id = auth.user_id()
