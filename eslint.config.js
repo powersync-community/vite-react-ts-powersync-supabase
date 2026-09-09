@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // .agents contains installed agent skills (see skills-lock.json), not app code
+  globalIgnores(['dist', '.agents']),
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
