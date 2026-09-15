@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "skillVersion": "1.6.0",
+  "date": "2026-09-09",
+  "decision": "trimmed",
+  "detected": [
+    "js"
+  ],
+  "kept": [
+    "js"
+  ],
+  "removed": [
+    "references/sdks/powersync-dart.md",
+    "references/sdks/powersync-kotlin.md",
+    "references/sdks/powersync-swift.md",
+    "references/sdks/powersync-dotnet.md",
+    "references/terraform.md"
+  ]
+}

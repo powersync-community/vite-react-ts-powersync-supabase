@@ -1,9 +1,8 @@
-import {
-  AbstractPowerSyncDatabase,
-  BaseObserver,
+import { BaseObserver, UpdateType } from "@powersync/web";
+import type {
+  CommonPowerSyncDatabase,
   CrudEntry,
-  UpdateType,
-  type PowerSyncBackendConnector,
+  PowerSyncBackendConnector,
 } from "@powersync/web";
 
 import {
@@ -127,17 +126,17 @@ export class SupabaseConnector
 
     console.debug('session expires at', session.expires_at);
 
-    if (session == null) {
-      throw new Error(`Failed to get Supabase session`);
-    }
-
     return {
       endpoint: this.config.powersyncUrl,
       token: session.access_token,
+      // Hint for the SDK on when to refresh credentials
+      expiresAt: session.expires_at
+        ? new Date(session.expires_at * 1000)
+        : undefined,
     };
   }
 
-  async uploadData(database: AbstractPowerSyncDatabase): Promise<void> {
+  async uploadData(database: CommonPowerSyncDatabase): Promise<void> {
     const transaction = await database.getNextCrudTransaction();
 
     if (!transaction) {

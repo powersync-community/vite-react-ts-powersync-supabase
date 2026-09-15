@@ -10,8 +10,10 @@ A templated Vite, TS, React, PowerSync and Supabase project to get you started q
 
 ## Install dependencies
 
+This project uses [pnpm](https://pnpm.io/installation) for package management.
+
 ```bash
-npm install
+pnpm install
 ```
 
 ## Local Development
@@ -30,9 +32,9 @@ Follow the two steps below to run the entire PowerSync + Supabase stack locally 
 
 2. Run the start-up commands for the various services:
    ```bash
-   npm run dev:supabase
-   npm run dev:powersync
-   npm run dev:ui
+   pnpm dev:supabase
+   pnpm dev:powersync
+   pnpm dev:ui
    ```
 
 Navigate to the local Vite URL e.g. http://localhost:5173/ Voilà!
@@ -95,49 +97,40 @@ If you prefer using the Supabase CLI to develop the database locally and push it
 <details>
 <summary><strong>Alternative: Setup using the PowerSync CLI</strong></summary>
 
-See [PowerSync CLI docs](https://docs.powersync.com/usage/tools/cli).
-
-> This PowerSync CLI only works with **PowerSync Cloud instances.**
-> The CLI currently does not support **self-hosted PowerSync instances.**
+See [PowerSync CLI docs](https://docs.powersync.com/tools/cli).
 
 If you don't have a PowerSync account yet, [sign up here](https://accounts.journeyapps.com/portal/powersync-signup).
 
-1. **Get your Personal Access Token:**
-   - Go to the [PowerSync dashboard](https://powersync.journeyapps.com/)
-   - Press `Ctrl + Shift + P` (or `Cmd + Shift + P` on Mac)
-   - Search for "Create Personal Access Token"
-   - Give it "owner" policy and a descriptive label
-   - Copy the generated token
-2. **Initialize the CLI and authenticate:**
+1. **Authenticate:**
    ```bash
-   npx powersync init
+   npx powersync login
    ```
-Paste your Personal Access Token when prompted.
-3. **Create a new PowerSync instance:**
+   This opens your browser to create a Personal Access Token. Alternatively, set the `PS_ADMIN_TOKEN` environment variable.
+2. **Scaffold the config files:**
    ```bash
-   npx powersync instance create
+   npx powersync init cloud
    ```
-Follow the prompts to configure:
-- Instance name (e.g., "supabase-staging")
-- Region (e.g., "EU")
-- Database connection details from your Supabase project (use the **direct connection**, not pooling)
-- When asked about Supabase auth, answer:
-   - `? Are you using Supabase auth? Yes`
-   - `? Do you want to add audiences? No`
-4. **Deploy sync rules:**
+   This creates a `powersync/` directory containing `service.yaml` and `sync-config.yaml`.
+3. **Edit the config files:**
+   - In `powersync/service.yaml`, fill in the database connection details from your Supabase project (use the **direct connection**, not pooling) and enable Supabase auth.
+   - Replace the contents of `powersync/sync-config.yaml` with the contents of [sync-config.yaml](sync-config.yaml) in this repo.
+4. **Create the instance and deploy:**
    ```bash
-   npx powersync instance sync-rules deploy -f sync-rules.yaml
+   npx powersync link cloud --create --project-id=<your-project-id>
+   npx powersync validate
+   npx powersync deploy
    ```
-
-> After deploying sync rules via CLI, the changes might not be reflected in the dashboard. If you want to see them in the dashboard, simply copy the contents of your `sync-rules.yaml` file and paste them into the dashboard's sync-rules editor, then redeploy.
+   Copy the instance URL from the output for the `VITE_POWERSYNC_URL` environment variable in the next step.
 
 </details>
 
-#### 3. Deploy Sync Rules (not needed if using PowerSync CLI)
+#### 3. Deploy the Sync Configuration (not needed if using PowerSync CLI)
 
-1. Open the [sync-rules.yaml](sync-rules.yaml) in this repo and copy the contents.
-2. In the [PowerSync dashboard](https://powersync.journeyapps.com/), paste that into the 'sync-rules.yaml' editor panel.
-3. Click the "Deploy sync rules" button and select your PowerSync instance from the drop-down list.
+This project uses [Sync Streams](https://docs.powersync.com/sync/streams/overview) to define which data syncs to which users.
+
+1. Open the [sync-config.yaml](sync-config.yaml) in this repo and copy the contents.
+2. In the [PowerSync dashboard](https://powersync.journeyapps.com/), paste that into the sync configuration editor panel.
+3. Click the "Deploy" button and select your PowerSync instance from the drop-down list.
 
 #### 4. Set environment variables
 

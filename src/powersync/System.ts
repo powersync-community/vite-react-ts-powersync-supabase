@@ -1,87 +1,13 @@
 import {
-  createBaseLogger,
-  LogLevel,
+  createConsoleLogger,
+  LogLevels,
   PowerSyncDatabase,
-  WASQLiteOpenFactory,
   WASQLiteVFS,
 } from "@powersync/web";
 import { AppSchema } from "./AppSchema";
 import { connector } from "./SupabaseConnector";
 
-const logger = createBaseLogger();
-logger.useDefaults();
-logger.setLevel(LogLevel.DEBUG);
-
-/**
- * Detects mobile devices (phones and tablets).
- *
- * Prefers the modern `navigator.userAgentData.mobile` hint (Chromium) and
- * falls back to user-agent sniffing, which is required because Safari does not
- * implement `userAgentData`. Note that iPadOS 13+ reports a desktop Mac
- * user-agent, so it is detected via touch-point support instead.
- */
-export function isMobile(): boolean {
-  if (typeof navigator === "undefined") return false;
-
-  const uaData = (
-    navigator as Navigator & { userAgentData?: { mobile?: boolean } }
-  ).userAgentData;
-  if (typeof uaData?.mobile === "boolean") return uaData.mobile;
-
-  const ua = navigator.userAgent;
-  // iPadOS 13+ looks like macOS; a Mac reporting touch points is really an iPad.
-  const isIPadOS =
-    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-
-  return /Android|iPhone|iPad|iPod|Mobi/i.test(ua) || isIPadOS;
-}
-
-/**
- * Detects Apple's Safari / WebKit.
- *
- * Every browser on iOS/iPadOS (including Chrome and Firefox) is WebKit under
- * the hood and shares Safari's OPFS limitations, so iOS is always treated as
- * Safari. On desktop we match Safari but exclude Chromium- and Firefox-based
- * browsers, which also carry "Safari" in their user-agent string.
- */
-export function isSafari(): boolean {
-  if (typeof navigator === "undefined") return false;
-
-  const ua = navigator.userAgent;
-  const isIOS =
-    /iPhone|iPad|iPod/i.test(ua) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  if (isIOS) return true;
-
-  return (
-    /Safari/i.test(ua) &&
-    !/Chrome|Chromium|Edg|OPR|Firefox|FxiOS|CriOS/i.test(ua)
-  );
-}
-
-/**
- * Decides whether multi-tab support should be enabled.
- *
- * Multi-tab requires SharedWorker, and is additionally disabled on Safari
- * (mobile and desktop) because Safari aggressively suspends background tabs,
- * which breaks the shared worker coordination between tabs.
- */
-export function isMultiTabEnabled(): boolean {
-  return typeof SharedWorker !== "undefined" && !isSafari();
-}
-
-/**
- * Detects OPFS availibility
- *
- * Checking if the OPFS related functions are availible
- */
-export function isOPFSAvailable(): boolean {
-  return (
-    typeof navigator !== "undefined" &&
-    typeof navigator.storage?.getDirectory === "function" &&
-    typeof Worker === "function"
-  );
-}
+const logger = createConsoleLogger({ minLevel: LogLevels.debug });
 
 /**
  * Checks whether OPFS actually works, not just whether the API exists.
@@ -91,7 +17,13 @@ export function isOPFSAvailable(): boolean {
  * unusable one. Browsers that expose the API otherwise support it.
  */
 export async function isOPFSUsable(): Promise<boolean> {
-  if (!isOPFSAvailable()) return false;
+  if (
+    typeof navigator === "undefined" ||
+    typeof navigator.storage?.getDirectory !== "function" ||
+    typeof Worker !== "function"
+  ) {
+    return false;
+  }
   try {
     await navigator.storage.getDirectory();
     return true;
@@ -100,51 +32,33 @@ export async function isOPFSUsable(): Promise<boolean> {
   }
 }
 
-export function pickVFS(opfsUsable: boolean = isOPFSAvailable()): WASQLiteVFS {
-  const safari = isSafari();
-  const mobile = isMobile();
-  const multiTab = isMultiTabEnabled();
-
-  // Fall back to IndexedDB (IDBBatchAtomicVFS) when OPFS can't be used:
-  //  - OPFS is not usable at all: no API, or Safari Private Browsing where the
-  //    API exists but createSyncAccessHandle fails (see isOPFSUsable), or
-  //  - any Safari: mobile (iOS/iPadOS) lacks OPFS support, and desktop
-  //    Safari's aggressive tab suspension can strand OPFS locks even with
-  //    multi-tab disabled
-  const forceIndexedDB = !opfsUsable || safari;
-
-  const vfs = forceIndexedDB
-    ? WASQLiteVFS.IDBBatchAtomicVFS
-    : WASQLiteVFS.OPFSCoopSyncVFS;
-
-  console.log(
-    `[powersync] using VFS: ${vfs} (safari=${safari}, mobile=${mobile}, multiTab=${multiTab}, opfsUsable=${opfsUsable})`,
-  );
-  return vfs;
-}
-
+// OPFSCoopSyncVFS is the recommended VFS and is stable across browsers,
+// including Safari. Fall back to IndexedDB when OPFS can't be used at all
+// (no API, or Safari Private Browsing). Multi-tab support is managed by the
+// SDK itself: enabled by default on desktop browsers, disabled on Safari.
 const opfsUsable = await isOPFSUsable();
-const enableMultiTabs = isMultiTabEnabled();
+const vfs = opfsUsable
+  ? WASQLiteVFS.OPFSCoopSyncVFS
+  : WASQLiteVFS.IDBBatchAtomicVFS;
+
+console.log(`[powersync] using VFS: ${vfs} (opfsUsable=${opfsUsable})`);
 
 export const powerSync = new PowerSyncDatabase({
-  database: new WASQLiteOpenFactory({
+  database: {
     dbFilename: "exampleVFS.db",
-    vfs: pickVFS(opfsUsable),
-    flags: {
-      enableMultiTabs,
-    },
-  }),
-  flags: {
-    enableMultiTabs,
+    vfs,
   },
   schema: AppSchema,
-  logger: logger,
+  logger,
 });
 
 // Sign in the user anonymously to Supabase (creates a temporary user session)
 await connector.signInAnonymously();
 
-// Establish connection between PowerSync and the Supabase connector
+// Establish connection between PowerSync and the Supabase connector.
+// checkpointMode 'requests' enables powerSync.requestCheckpoint(), used by the
+// refresh flow in App.tsx (requires PowerSync Service 1.24.0+).
 powerSync.connect(connector, {
   crudUploadThrottleMs: 5000,
+  checkpointMode: "requests",
 });

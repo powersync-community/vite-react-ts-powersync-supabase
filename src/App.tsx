@@ -7,6 +7,7 @@ import { connector } from "./powersync/SupabaseConnector";
 
 function App() {
   const [userID, setUserID] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const status = useStatus();
 
   // Example of a watch query using useQuery hook
@@ -33,6 +34,25 @@ function App() {
     getCurrentUser();
   }, []);
 
+  // Example of a checkpoint request - see https://docs.powersync.com/client-sdks/advanced/checkpoint-requests
+  // requestCheckpoint() asks the PowerSync Service for the current server state;
+  // waitForSync() resolves once the local database has caught up to it. Pending
+  // local writes are uploaded and their results synced back as part of the wait.
+  // No manual re-query is needed afterwards: the useQuery watch query above
+  // re-renders automatically as the refreshed data lands in the local database.
+  // Requires checkpointMode: "requests" in connect() - see powersync/System.ts.
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      const checkpoint = await powerSync.requestCheckpoint();
+      await checkpoint.waitForSync({ signal: AbortSignal.timeout(30_000) });
+    } catch (err) {
+      console.error("Refresh failed:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   // Example of executing a native SQLite query using PowerSync
   // This demonstrates how to directly execute SQL commands for data mutations
   const updateCounter = async (counter: CounterRecord, newCount: number) => {
@@ -51,11 +71,8 @@ function App() {
   const createCounter = async () => {
     // Ensure user is authenticated before creating counter
     if (!userID) {
-      // If still no userID after fetch, don't proceed
-      if (!userID) {
-        console.error("Cannot create counter: No authenticated user");
-        return;
-      }
+      console.error("Cannot create counter: No authenticated user");
+      return;
     }
 
     try {
@@ -82,8 +99,8 @@ function App() {
               <>
                 <div><strong>connected:</strong> {status.connected.toString()}</div>
                 <div><strong>connecting:</strong> {status.connecting.toString()}</div>
-                <div><strong>uploading:</strong> {status.dataFlowStatus?.uploading?.toString()}</div>
-                <div><strong>downloading:</strong> {status.dataFlowStatus?.downloading?.toString()}</div>
+                <div><strong>uploading:</strong> {status.uploading.toString()}</div>
+                <div><strong>downloading:</strong> {status.downloading.toString()}</div>
                 <div>
                   <strong>downloadProgress:</strong>{" "}
                   {status.downloadProgress?.downloadedFraction != null
@@ -97,6 +114,13 @@ function App() {
               </>
             )}
           </div>
+          <button
+            onClick={refresh}
+            disabled={refreshing || !status.connected}
+            className="primary-button refresh-button"
+          >
+            {refreshing ? "Refreshing…" : "Refresh"}
+          </button>
         </div>
 
         <div className="logo-card">
@@ -117,8 +141,8 @@ function App() {
               </a>
             </li>
             <li>
-              <a href="https://docs.powersync.com/usage/sync-rules" target="_blank" rel="noopener noreferrer">
-                PowerSync Sync Rules
+              <a href="https://docs.powersync.com/sync/streams/overview" target="_blank" rel="noopener noreferrer">
+                PowerSync Sync Streams
               </a>
             </li>
             <li>
