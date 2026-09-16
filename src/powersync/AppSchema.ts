@@ -1,21 +1,32 @@
 import { column, Schema, Table } from "@powersync/web";
 
 export const COUNTER_TABLE = "counters";
+export const CHURN_TABLE = "churn";
 
-// Define table structure with PowerSync column types
-// Each column maps to SQLite types and handles sync operations
+// The synced table. Sync rules put every counter in one global bucket, so a
+// fresh client downloads all of them.
 const counters = new Table({
-    owner_id: column.text,    // String field for identifying record owner
-    count: column.integer,    // Number field for counter value
-    created_at: column.text, // Timestamp for record creation
+  owner_id: column.text,
+  count: column.integer,
+  created_at: column.text,
 });
 
-// Create the database schema - PowerSync uses this for sync rules and local storage
-// Add all the tables that you want your client to sync here
+// Local-only scratch table the repro script writes to. Local-only means these
+// rows never reach the upload queue or the server, so the script can generate
+// as much write traffic as it likes without touching real data. The point is
+// the write traffic itself: it is what makes the VFS fill a WAL file, swap to
+// the other one and checkpoint, which is the race the bug lives in.
+const churn = new Table(
+  {
+    data: column.text,
+  },
+  { localOnly: true }
+);
+
 export const AppSchema = new Schema({
-    counters,
+  counters,
+  churn,
 });
 
-// Generate TypeScript types from schema for type-safe database operations
 export type Database = (typeof AppSchema)["types"];
 export type CounterRecord = Database["counters"];

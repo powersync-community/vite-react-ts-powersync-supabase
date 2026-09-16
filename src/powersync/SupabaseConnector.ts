@@ -1,8 +1,8 @@
 import {
-  AbstractPowerSyncDatabase,
   BaseObserver,
-  CrudEntry,
   UpdateType,
+  type CommonPowerSyncDatabase,
+  type CrudEntry,
   type PowerSyncBackendConnector,
 } from "@powersync/web";
 
@@ -30,6 +30,13 @@ const FATAL_RESPONSE_CODES = [
   // INSUFFICIENT PRIVILEGE - typically a row-level security violation
   new RegExp("^42501$"),
 ];
+
+/**
+ * Maximum rows per batched Supabase request. Bulk upserts are limited by
+ * request body size; batched deletes put every id in the query string, so
+ * keep this modest to stay clear of URL length limits.
+ */
+const UPLOAD_BATCH_SIZE = 500;
 
 export type SupabaseConnectorListener = {
   initialized: () => void;
@@ -137,41 +144,40 @@ export class SupabaseConnector
     };
   }
 
-  async uploadData(database: AbstractPowerSyncDatabase): Promise<void> {
-    const transaction = await database.getNextCrudTransaction();
+  async uploadData(database: CommonPowerSyncDatabase): Promise<void> {
+    // Fetch up to UPLOAD_BATCH_SIZE pending changes, which may span multiple
+    // local transactions. PowerSync calls uploadData again while more changes
+    // remain. Note: batches don't preserve transaction boundaries - if
+    // transactional consistency with the backend is important, use
+    // getNextCrudTransaction() and process each transaction in a single call.
+    const crudBatch = await database.getCrudBatch(UPLOAD_BATCH_SIZE);
 
-    if (!transaction) {
+    if (!crudBatch) {
       return;
     }
 
-    let lastOp: CrudEntry | null = null;
+    let lastGroup: CrudEntry[] = [];
     try {
-      // Note: If transactional consistency is important, use database functions
-      // or edge functions to process the entire transaction in a single call.
-      for (const op of transaction.crud) {
-        lastOp = op;
-        const table = this.client.from(op.table);
-        let result: PostgrestSingleResponse<null>;
-        switch (op.op) {
-          case UpdateType.PUT:
-            result = await table.upsert({ ...op.opData, id: op.id });
-            break;
-          case UpdateType.PATCH:
-            result = await table.update(op.opData).eq("id", op.id);
-            break;
-          case UpdateType.DELETE:
-            result = await table.delete().eq("id", op.id);
-            break;
+      // Group consecutive operations of the same type on the same table, so
+      // bulk inserts and deletes go to Supabase as a few batched requests
+      // instead of one request per row. Only consecutive ops are grouped to
+      // preserve the original operation order.
+      let group: CrudEntry[] = [];
+      for (const op of crudBatch.crud) {
+        const prev = group[group.length - 1];
+        if (prev && (prev.op !== op.op || prev.table !== op.table)) {
+          lastGroup = group;
+          await this.uploadBatch(group);
+          group = [];
         }
-
-        if (result.error) {
-          console.error(result.error);
-          result.error.message = `Could not update Supabase. Received error: ${result.error.message}`;
-          throw result.error;
-        }
+        group.push(op);
+      }
+      if (group.length > 0) {
+        lastGroup = group;
+        await this.uploadBatch(group);
       }
 
-      await transaction.complete();
+      await crudBatch.complete();
     } catch (ex: unknown) {
       console.debug(ex);
       const error = ex as { code?: string };
@@ -187,13 +193,57 @@ export class SupabaseConnector
          * If protecting against data loss is important, save the failing records
          * elsewhere instead of discarding, and/or notify the user.
          */
-        console.error("Data upload error - discarding:", lastOp, ex);
-        await transaction.complete();
+        console.error(
+          `Data upload error - discarding batch of ${lastGroup.length} ${lastGroup[0]?.op} ops on ${lastGroup[0]?.table}:`,
+          ex
+        );
+        await crudBatch.complete();
       } else {
         // Error may be retryable - e.g. network error or temporary server error.
         // Throwing an error here causes this call to be retried after a delay.
         throw ex;
       }
+    }
+  }
+
+  private async uploadBatch(batch: CrudEntry[]): Promise<void> {
+    const { op, table } = batch[0];
+    let result: PostgrestSingleResponse<null>;
+    switch (op) {
+      case UpdateType.PUT:
+        result = await this.client
+          .from(table)
+          .upsert(batch.map((entry) => ({ ...entry.opData, id: entry.id })));
+        break;
+      case UpdateType.PATCH:
+        // Partial updates may touch different columns per row, so they can't
+        // share a single request; apply them one at a time.
+        for (const entry of batch) {
+          const patchResult = await this.client
+            .from(table)
+            .update(entry.opData)
+            .eq("id", entry.id);
+          this.throwOnError(patchResult);
+        }
+        return;
+      case UpdateType.DELETE:
+        result = await this.client
+          .from(table)
+          .delete()
+          .in(
+            "id",
+            batch.map((entry) => entry.id)
+          );
+        break;
+    }
+    this.throwOnError(result);
+  }
+
+  private throwOnError(result: PostgrestSingleResponse<null>): void {
+    if (result.error) {
+      console.error(result.error);
+      result.error.message = `Could not update Supabase. Received error: ${result.error.message}`;
+      throw result.error;
     }
   }
 }

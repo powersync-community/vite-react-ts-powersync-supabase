@@ -1,0 +1,26 @@
+diff --git a/src/examples/WriteAhead.js b/src/examples/WriteAhead.js
+index 79e228f..eeba922 100644
+--- a/src/examples/WriteAhead.js
++++ b/src/examples/WriteAhead.js
+@@ -562,6 +562,21 @@ export class WriteAhead {
+       } else {
+         // Read the transaction from the WAL file.
+         tx = this.#readTx();
++        if (!tx) {
++          // The next transaction in sequence is neither in the pending map
++          // nor readable from the WAL file yet. This can happen because
++          // BroadcastChannel only preserves ordering per sender, so with
++          // multiple writers a transaction can arrive before its
++          // predecessor from another connection, and because commits are
++          // broadcast without flushing, so the WAL write may not yet be
++          // visible to this context's access handle. Transaction ids are
++          // positional in the WAL file, so the only safe response is to
++          // stop advancing; a later broadcast, the backstop, or the next
++          // local write will retry once the frame is readable.
++          console.warn(`WAL txId ${nextTxId} not yet readable, deferring ` +
++            `${this.#mapIdToPendingTx.size} pending transaction(s)`);
++          break;
++        }
+       }
+ 
+       this.#activateTx(tx);

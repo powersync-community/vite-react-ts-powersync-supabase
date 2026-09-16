@@ -1,150 +1,43 @@
 import {
-  createBaseLogger,
-  LogLevel,
+  createConsoleLogger,
+  LogLevels,
   PowerSyncDatabase,
-  WASQLiteOpenFactory,
   WASQLiteVFS,
 } from "@powersync/web";
 import { AppSchema } from "./AppSchema";
 import { connector } from "./SupabaseConnector";
 
-const logger = createBaseLogger();
-logger.useDefaults();
-logger.setLevel(LogLevel.DEBUG);
+export const DB_FILENAME = "repro.db";
 
-/**
- * Detects mobile devices (phones and tablets).
- *
- * Prefers the modern `navigator.userAgentData.mobile` hint (Chromium) and
- * falls back to user-agent sniffing, which is required because Safari does not
- * implement `userAgentData`. Note that iPadOS 13+ reports a desktop Mac
- * user-agent, so it is detected via touch-point support instead.
- */
-export function isMobile(): boolean {
-  if (typeof navigator === "undefined") return false;
+// OPFSWriteAheadVFS is the VFS under test. It is the only one that supports
+// additional read-only connections, so each tab runs three database workers
+// (one writer, two readers) against the same OPFS files, coordinating over
+// Web Locks and a BroadcastChannel.
+export const powerSync = new PowerSyncDatabase({
+  schema: AppSchema,
+  database: {
+    dbFilename: DB_FILENAME,
+    vfs: WASQLiteVFS.OPFSWriteAheadVFS,
+    additionalReaders: 2,
+  },
+  logger: createConsoleLogger({ minLevel: LogLevels.warn }),
+});
 
-  const uaData = (
-    navigator as Navigator & { userAgentData?: { mobile?: boolean } }
-  ).userAgentData;
-  if (typeof uaData?.mobile === "boolean") return uaData.mobile;
+// The repro script reads sync status through this handle.
+(globalThis as Record<string, unknown>).powerSync = powerSync;
 
-  const ua = navigator.userAgent;
-  // iPadOS 13+ looks like macOS; a Mac reporting touch points is really an iPad.
-  const isIPadOS =
-    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+let started = false;
 
-  return /Android|iPhone|iPad|iPod|Mobi/i.test(ua) || isIPadOS;
-}
-
-/**
- * Detects Apple's Safari / WebKit.
- *
- * Every browser on iOS/iPadOS (including Chrome and Firefox) is WebKit under
- * the hood and shares Safari's OPFS limitations, so iOS is always treated as
- * Safari. On desktop we match Safari but exclude Chromium- and Firefox-based
- * browsers, which also carry "Safari" in their user-agent string.
- */
-export function isSafari(): boolean {
-  if (typeof navigator === "undefined") return false;
-
-  const ua = navigator.userAgent;
-  const isIOS =
-    /iPhone|iPad|iPod/i.test(ua) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  if (isIOS) return true;
-
-  return (
-    /Safari/i.test(ua) &&
-    !/Chrome|Chromium|Edg|OPR|Firefox|FxiOS|CriOS/i.test(ua)
-  );
-}
-
-/**
- * Decides whether multi-tab support should be enabled.
- *
- * Multi-tab requires SharedWorker, and is additionally disabled on Safari
- * (mobile and desktop) because Safari aggressively suspends background tabs,
- * which breaks the shared worker coordination between tabs.
- */
-export function isMultiTabEnabled(): boolean {
-  return typeof SharedWorker !== "undefined" && !isSafari();
-}
-
-/**
- * Detects OPFS availibility
- *
- * Checking if the OPFS related functions are availible
- */
-export function isOPFSAvailable(): boolean {
-  return (
-    typeof navigator !== "undefined" &&
-    typeof navigator.storage?.getDirectory === "function" &&
-    typeof Worker === "function"
-  );
-}
-
-/**
- * Checks whether OPFS actually works, not just whether the API exists.
- *
- * Safari Private Browsing exposes the OPFS API but rejects when you request the
- * directory, so calling getDirectory() distinguishes a usable OPFS from an
- * unusable one. Browsers that expose the API otherwise support it.
- */
-export async function isOPFSUsable(): Promise<boolean> {
-  if (!isOPFSAvailable()) return false;
+// Signs in anonymously and connects. Runs after the first paint so the page
+// shows sync progress instead of a blank screen.
+export async function start() {
+  if (started) return;
+  started = true;
   try {
-    await navigator.storage.getDirectory();
-    return true;
-  } catch {
-    return false;
+    await connector.signInAnonymously();
+    await powerSync.connect(connector);
+  } catch (err) {
+    started = false;
+    console.error("Failed to connect PowerSync:", err);
   }
 }
-
-export function pickVFS(opfsUsable: boolean = isOPFSAvailable()): WASQLiteVFS {
-  const safari = isSafari();
-  const mobile = isMobile();
-  const multiTab = isMultiTabEnabled();
-
-  // Fall back to IndexedDB (IDBBatchAtomicVFS) when OPFS can't be used:
-  //  - OPFS is not usable at all: no API, or Safari Private Browsing where the
-  //    API exists but createSyncAccessHandle fails (see isOPFSUsable), or
-  //  - any Safari: mobile (iOS/iPadOS) lacks OPFS support, and desktop
-  //    Safari's aggressive tab suspension can strand OPFS locks even with
-  //    multi-tab disabled
-  const forceIndexedDB = !opfsUsable || safari;
-
-  const vfs = forceIndexedDB
-    ? WASQLiteVFS.IDBBatchAtomicVFS
-    : WASQLiteVFS.OPFSCoopSyncVFS;
-
-  console.log(
-    `[powersync] using VFS: ${vfs} (safari=${safari}, mobile=${mobile}, multiTab=${multiTab}, opfsUsable=${opfsUsable})`,
-  );
-  return vfs;
-}
-
-const opfsUsable = await isOPFSUsable();
-const enableMultiTabs = isMultiTabEnabled();
-
-export const powerSync = new PowerSyncDatabase({
-  database: new WASQLiteOpenFactory({
-    dbFilename: "exampleVFS.db",
-    vfs: pickVFS(opfsUsable),
-    flags: {
-      enableMultiTabs,
-    },
-  }),
-  flags: {
-    enableMultiTabs,
-  },
-  schema: AppSchema,
-  logger: logger,
-});
-
-// Sign in the user anonymously to Supabase (creates a temporary user session)
-await connector.signInAnonymously();
-
-// Establish connection between PowerSync and the Supabase connector
-powerSync.connect(connector, {
-  crudUploadThrottleMs: 5000,
-});

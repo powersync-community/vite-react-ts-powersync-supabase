@@ -1,3 +1,7 @@
+> **This branch is a bug reproduction, not the template.** The app has been cut
+> down to the minimum needed to trigger the OPFSWriteAheadVFS `disk I/O error`.
+> See [REPRO.md](REPRO.md) for how to run it.
+
 # Vite + React + TS + PowerSync + Supabase
 
 ![App Demo](https://github.com/powersync-community/vite-react-ts-powersync-supabase/releases/download/v1.0.0/demo.gif)

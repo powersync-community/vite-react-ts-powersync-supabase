@@ -1,131 +1,44 @@
-html,
-body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
+main {
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 2rem 1.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
-#root {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
+h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1.25rem;
 }
 
-.app-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  font-family: sans-serif;
-  padding: 20px;
-  gap: 24px;
-  background-color: #111;
-  color: white;
-  box-sizing: border-box;
-  width: 100%;
-}
-
-.mono-text {
-  font-family: monospace;
-  font-size: 14px;
-}
-
-.centered {
-  text-align: center;
-}
-
-.counter-grid {
+dl {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  width: 100%;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1.5rem;
+  margin: 0;
+  font-size: 0.9rem;
 }
 
-@media (max-width: 768px) {
-  .counter-grid {
-    grid-template-columns: 1fr;
-  }
+dt {
+  opacity: 0.6;
 }
 
-.counter-card {
-  padding: 16px;
-  border: 1px solid #333;
-  border-radius: 12px;
-  background-color: #222;
+dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
 }
 
-.counter-count {
-  font-size: 18px;
-  font-weight: bold;
+main.broken h1::after {
+  content: " — BROKEN";
+  color: #c0392b;
 }
 
-.primary-button {
-  padding: 8px 16px;
-  font-size: 16px;
-  background-color: #007bff;
-  color: black;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.top-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.top-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1rem;
-}
-
-.status-card,
-.logo-card,
-.links-card {
-  padding: 1rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.logo-card {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border: none;
-}
-
-.logo-image {
-  max-width: 100%;
-  max-height: 150px;
-  object-fit: contain;
-}
-
-.links-card ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-.links-card li {
-  margin-bottom: 0.5rem;
-}
-
-.links-card a {
-  color: #007bff;
-  text-decoration: none;
-}
-
-.links-card a:hover {
-  text-decoration: underline;
-}
-
-h3 {
-  margin-top: 0;
+.errors {
+  margin: 1.5rem 0 0;
+  padding: 0.75rem 0.75rem 0.75rem 1.75rem;
+  border-left: 3px solid #c0392b;
+  background: rgba(192, 57, 43, 0.08);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
