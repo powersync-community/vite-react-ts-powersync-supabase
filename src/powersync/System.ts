@@ -5,7 +5,6 @@ import {
   WASQLiteVFS,
 } from "@powersync/web";
 import { AppSchema } from "./AppSchema";
-import { connector } from "./SupabaseConnector";
 
 export const DB_FILENAME = "repro.db";
 
@@ -25,19 +24,3 @@ export const powerSync = new PowerSyncDatabase({
 
 // The repro script reads sync status through this handle.
 (globalThis as Record<string, unknown>).powerSync = powerSync;
-
-let started = false;
-
-// Signs in anonymously and connects. Runs after the first paint so the page
-// shows sync progress instead of a blank screen.
-export async function start() {
-  if (started) return;
-  started = true;
-  try {
-    await connector.signInAnonymously();
-    await powerSync.connect(connector);
-  } catch (err) {
-    started = false;
-    console.error("Failed to connect PowerSync:", err);
-  }
-}
